@@ -1,0 +1,38 @@
+# Ignore intermediate and derived files
+*.log
+*.temp
+*.obj
+*.pch
+*.pdb
+*.exe
+*.dll
+*.so
+*.dylib
+*.sln
+*.suo
+*.VC.db
+*.VC.opendb
+*.vscode/
+
+# Ignore build and binary folders
+/Binaries/
+/Build/
+/DerivedDataCache/
+/Intermediate/
+/Saved/
+/.vs/
+
+# Ignore config files that are user-specific
+Config/DefaultEditor.ini
+Config/DefaultEditorUserSettings.ini
+Config/DefaultGame.ini
+
+# Ignore external dependencies
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
+
+# Ignore Rider files
+.idea/
+.idea_modules/
+.Rider/
+*.iml
