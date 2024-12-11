@@ -3,6 +3,8 @@
 #include "atmosphere.h"
 #include "BuoyancyData.h"
 #include "Camera/CameraActor.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Math/UnitConversion.h"
 
 // Sets default values
@@ -15,12 +17,23 @@ AAirship::AAirship()
 	AirshipMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AirshipMesh"));
 	RootComponent = AirshipMesh;
 
+	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+	SpringArm->SetupAttachment(AirshipMesh);
+
+	AirshipCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
+	AirshipCamera->SetupAttachment(SpringArm);
+	
 	// Initialise default properties
 	Length = 1.0f; //length in meters
 	Diameter = 1.0f; //diameter in meters
 	CD = 0.1f; //Drag coefficient of the airship
 	Mass = 1.0f; //mass of the airship in KG
 	Velocity = FVector::ZeroVector;
+	Position = FVector::ZeroVector;
+	TargetArmLength = 150.0f;
+	CameraLagSpeed = 3.0f;
+	FieldOfView = 90.0f;
+	
 	//Base values set to one so cal values are not zero.
 	//**WIll be adding much more but getting the basics in now**
 	//**May be worth having fixed default values for testing**
@@ -44,6 +57,7 @@ void AAirship::BeginPlay()
 	 	bool bIsGravityEnabled = AirshipMesh->IsGravityEnabled();
 	 	UE_LOG(LogTemp, Warning, TEXT("Airship gravity enabled: %s"), bIsGravityEnabled ? TEXT("True") : TEXT("False"));
 	 }
+	SetupCamera();
 }
 
 // Called every frame does all the checking against the atmo and the object
@@ -72,9 +86,9 @@ void AAirship::Tick(float DeltaTime)
 		float Acceletration = NetForce / Mass;
 		
 		Velocity.Z += Acceletration * DeltaTime;
-		FVector BuoyancyVector = FVector(0.0f, 0.0f, Velocity.Z);
+		Position = FVector(0.0f, 0.0f, Velocity.Z);
 
-		AddActorWorldOffset(BuoyancyVector * DeltaTime, true); 
+		AddActorWorldOffset(Position * DeltaTime, true); 
 		
 		//Debugging
 		if (GEngine)
@@ -116,6 +130,58 @@ void AAirship::UpdateDimensionsFromMesh()
 		UE_LOG(LogTemp, Warning, TEXT("AirshipMesh is not set!"));
 	}
 }
+
+void AAirship::SetupCamera()
+{
+	if (SpringArm)
+	{
+		SpringArm->TargetArmLength = TargetArmLength;
+		SpringArm->bEnableCameraLag = true;
+		SpringArm->CameraLagSpeed = CameraLagSpeed;
+		SpringArm->bInheritPitch = true;
+		SpringArm->bInheritYaw = true;
+		SpringArm->bInheritRoll = false;
+	}
+	
+	if (!AirshipCamera)
+	{
+		AirshipCamera->FieldOfView = FieldOfView;
+	}
+
+	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+	if (PlayerController && AirshipCamera)
+	{
+		PlayerController->SetViewTargetWithBlend(this, 0.5f);
+	}
+	
+}
+
+//Spawns a camera, attaches to the airship mesh, sets it relative pos/rotation and makes it the active camera
+/*
+void AAirship::SetupCamera()
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	AirshipCamera = GetWorld()->SpawnActor<ACameraActor>(ACameraActor::StaticClass(), SpawnParams);
+
+	if (AirshipCamera)
+	{
+		// Attach the CameraActor to the Airship
+		AirshipCamera->AttachToComponent(AirshipMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+		// Set its relative position and orientation
+		AirshipCamera->SetActorRelativeLocation(FVector(-80.0f, 0.0f, 0.0f)); // Offset above the Airship
+		AirshipCamera->SetActorRelativeRotation(FRotator(0.0f, 0.0f, 0.0f)); // Slight downward tilt (adjust as needed)
+
+		// Make the CameraActor the active camera
+		APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+		if (PlayerController)
+		{
+			PlayerController->SetViewTarget(AirshipCamera);
+		}
+	}
+*/
+//}
 
 void AAirship::SetAirshipScale(float ScaleFactor)
 {

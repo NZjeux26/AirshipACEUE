@@ -1,7 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Camera/CameraComponent.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Airship.generated.h"
 
 UCLASS()
@@ -23,7 +25,6 @@ protected:
 	// Static mesh component representing the airship
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Airship")
 	UStaticMeshComponent* AirshipMesh;
-
 	// Airship physical properties
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
 	float Length;
@@ -49,9 +50,27 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Airship Properties")
 	FVector Velocity;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
+	FVector Position;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	UCameraComponent* AirshipCamera;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	USpringArmComponent* SpringArm;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float TargetArmLength;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float CameraLagSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float FieldOfView;
 	// Recalculate dimensions based on the mesh
 	void UpdateDimensionsFromMesh();
+
+	void SetupCamera();
 
 public:
 
