@@ -7,7 +7,7 @@
 #include "Airship.generated.h"
 
 UCLASS()
-class AIRSHIPACEUE_API AAirship : public AActor
+class AIRSHIPACEUE_API AAirship : public APawn
 {
 	GENERATED_BODY()
 
@@ -71,6 +71,8 @@ protected:
 	void UpdateDimensionsFromMesh();
 
 	void SetupCamera();
+
+	void SetDefaultPawn();
 
 public:
 

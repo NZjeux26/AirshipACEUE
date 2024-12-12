@@ -4,6 +4,7 @@
 #include "BuoyancyData.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/GameModeBase.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Math/UnitConversion.h"
 
@@ -43,8 +44,8 @@ AAirship::AAirship()
 void AAirship::BeginPlay()
 {
 	Super::BeginPlay();
-	// Calculate dimensions from the mesh
-	UpdateDimensionsFromMesh();
+	// Calculate dimensions from the mesh commented out for now until meshs for players setup
+	//UpdateDimensionsFromMesh(); 
 	Volume = BuoyancyData::CalVolume(Length, Diameter); //Automatically calculate the volume based off the other values
 	FrontalArea = BuoyancyData::CalFrontalArea(Diameter); //Frontal area of the airship in meters squared
 	LateralArea = BuoyancyData::CalLateralArea(Length, Diameter); //Lateral area of the airship in meters squared
@@ -57,7 +58,11 @@ void AAirship::BeginPlay()
 	 	bool bIsGravityEnabled = AirshipMesh->IsGravityEnabled();
 	 	UE_LOG(LogTemp, Warning, TEXT("Airship gravity enabled: %s"), bIsGravityEnabled ? TEXT("True") : TEXT("False"));
 	 }
+	//Set the airship as the default pawn
+	SetDefaultPawn();
+	//Set up the cameras and spring arm
 	SetupCamera();
+	
 }
 
 // Called every frame does all the checking against the atmo and the object
@@ -91,15 +96,15 @@ void AAirship::Tick(float DeltaTime)
 		AddActorWorldOffset(Position * DeltaTime, true); 
 		
 		//Debugging
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(
-				-1,
-				0.0f,
-				FColor::Yellow,
-				FString::Printf(TEXT("Temperature: %.4f\nPressure: %.4f\nDensity: %0.4f\nNetForce: %.4f\nBForce: %0.4f\nGForce: %0.4f\nAlt: %.4f\nAcc: %.4f"),
-											Temperature, Pressure, Density, NetForce, BuoyantForce, GravityForce,Altitude, Acceletration));
-		}
+		// if (GEngine)
+		// {
+		// 	GEngine->AddOnScreenDebugMessage(
+		// 		-1,
+		// 		0.0f,
+		// 		FColor::Yellow,
+		// 		FString::Printf(TEXT("Temperature: %.4f\nPressure: %.4f\nDensity: %0.4f\nNetForce: %.4f\nBForce: %0.4f\nGForce: %0.4f\nAlt: %.4f\nAcc: %.4f"),
+		// 									Temperature, Pressure, Density, NetForce, BuoyantForce, GravityForce,Altitude, Acceletration));
+		// }
 	}
 }
 
@@ -143,7 +148,7 @@ void AAirship::SetupCamera()
 		SpringArm->bInheritRoll = false;
 	}
 	
-	if (!AirshipCamera)
+	if (AirshipCamera)
 	{
 		AirshipCamera->FieldOfView = FieldOfView;
 	}
@@ -154,6 +159,23 @@ void AAirship::SetupCamera()
 		PlayerController->SetViewTargetWithBlend(this, 0.5f);
 	}
 	
+}
+
+void AAirship::SetDefaultPawn()
+{
+	// Set the Default Pawn Class dynamically
+	AGameModeBase* GameMode = GetWorld()->GetAuthGameMode();
+	if (GameMode)
+	{
+		GameMode->DefaultPawnClass = StaticClass();
+	}
+
+	// Possess the Airship
+	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+	if (PlayerController)
+	{
+		PlayerController->Possess(this);
+	}
 }
 
 //Spawns a camera, attaches to the airship mesh, sets it relative pos/rotation and makes it the active camera
