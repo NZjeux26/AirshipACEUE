@@ -20,7 +20,7 @@ AAirship::AAirship()
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(AirshipMesh);
-
+	
 	AirshipCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	AirshipCamera->SetupAttachment(SpringArm);
 	
@@ -31,9 +31,6 @@ AAirship::AAirship()
 	Mass = 1.0f; //mass of the airship in KG
 	Velocity = FVector::ZeroVector;
 	Position = FVector::ZeroVector;
-	TargetArmLength = 150.0f;
-	CameraLagSpeed = 3.0f;
-	FieldOfView = 90.0f;
 	
 	//Base values set to one so cal values are not zero.
 	//**WIll be adding much more but getting the basics in now**
@@ -61,7 +58,7 @@ void AAirship::BeginPlay()
 	//Set the airship as the default pawn
 	SetDefaultPawn();
 	//Set up the cameras and spring arm
-	SetupCamera();
+	//SetupCamera();
 	
 }
 
@@ -96,15 +93,15 @@ void AAirship::Tick(float DeltaTime)
 		AddActorWorldOffset(Position * DeltaTime, true); 
 		
 		//Debugging
-		// if (GEngine)
-		// {
-		// 	GEngine->AddOnScreenDebugMessage(
-		// 		-1,
-		// 		0.0f,
-		// 		FColor::Yellow,
-		// 		FString::Printf(TEXT("Temperature: %.4f\nPressure: %.4f\nDensity: %0.4f\nNetForce: %.4f\nBForce: %0.4f\nGForce: %0.4f\nAlt: %.4f\nAcc: %.4f"),
-		// 									Temperature, Pressure, Density, NetForce, BuoyantForce, GravityForce,Altitude, Acceletration));
-		// }
+		if (GEngine)
+		{
+		 	GEngine->AddOnScreenDebugMessage(
+		 		-1,
+		 		0.0f,
+		 		FColor::Yellow,
+		 		FString::Printf(TEXT("Temperature: %.4f\nPressure: %.4f\nDensity: %0.4f\nNetForce: %.4f\nBForce: %0.4f\nGForce: %0.4f\nAlt: %.4f\nAcc: %.4f"),
+		 									Temperature, Pressure, Density, NetForce, BuoyantForce, GravityForce,Altitude, Acceletration));
+		}
 	}
 }
 
@@ -136,7 +133,7 @@ void AAirship::UpdateDimensionsFromMesh()
 	}
 }
 
-void AAirship::SetupCamera()
+/*void AAirship::SetupCamera()
 {
 	if (SpringArm)
 	{
@@ -159,7 +156,7 @@ void AAirship::SetupCamera()
 		PlayerController->SetViewTargetWithBlend(this, 0.5f);
 	}
 	
-}
+}*/
 
 void AAirship::SetDefaultPawn()
 {
@@ -177,33 +174,6 @@ void AAirship::SetDefaultPawn()
 		PlayerController->Possess(this);
 	}
 }
-
-//Spawns a camera, attaches to the airship mesh, sets it relative pos/rotation and makes it the active camera
-/*
-void AAirship::SetupCamera()
-{
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
-	AirshipCamera = GetWorld()->SpawnActor<ACameraActor>(ACameraActor::StaticClass(), SpawnParams);
-
-	if (AirshipCamera)
-	{
-		// Attach the CameraActor to the Airship
-		AirshipCamera->AttachToComponent(AirshipMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-
-		// Set its relative position and orientation
-		AirshipCamera->SetActorRelativeLocation(FVector(-80.0f, 0.0f, 0.0f)); // Offset above the Airship
-		AirshipCamera->SetActorRelativeRotation(FRotator(0.0f, 0.0f, 0.0f)); // Slight downward tilt (adjust as needed)
-
-		// Make the CameraActor the active camera
-		APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-		if (PlayerController)
-		{
-			PlayerController->SetViewTarget(AirshipCamera);
-		}
-	}
-*/
-//}
 
 void AAirship::SetAirshipScale(float ScaleFactor)
 {

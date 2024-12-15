@@ -56,17 +56,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	UCameraComponent* AirshipCamera;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	USpringArmComponent* SpringArm;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	float TargetArmLength;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	float CameraLagSpeed;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	float FieldOfView;
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	// float TargetArmLength;
+	//
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	// float CameraLagSpeed;
+	//
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	// float FieldOfView;
 	// Recalculate dimensions based on the mesh
 	void UpdateDimensionsFromMesh();
 
