@@ -63,7 +63,7 @@ void AAirship::BeginPlay()
 		if (Engine)
 		{
 			UE_LOG(LogTemp, Log, TEXT("Engine found: %s"), *Engine->GetName());
-			Engine->RegisterComponent(); // Ensure it's active
+			Engine->RegisterComponent(); // Ensure it's act
 		}
 	}
 }
@@ -75,8 +75,7 @@ void AAirship::Tick(float DeltaTime)
 	//gets the current position of the airship, assigns the Z location
 	const FVector CurrentLocation = GetActorLocation();
 	const float Altitude = CurrentLocation.Z; //this is actually in CM, but we can just treat it as Meters in the math?
-	//check for the Atmosphere subsystem, if found assign local vars to update each tick by calling the cal functions to
-	//update based on airship position.
+	//check for the Atmosphere subsystem, if found assign local vars to update each tick by calling the cal functions to update based on airship position.
 	if (UAtmosphere* AtmosphereSub = GetWorld()->GetSubsystem<UAtmosphere>())
 	{
 		//update the atmo each frame
@@ -89,7 +88,17 @@ void AAirship::Tick(float DeltaTime)
 		FVector BuoyantForce = FVector(0.0f, 0.0f, BuoyancyData::CalculateBuoyancyForce(Density, Volume));
 		FVector GravityForce = FVector(0.0f, 0.0f, Mass * PhysicsConstants::GGravityOnEarth);
 		FVector DragForce = AAirship::CalDrag(Density); //drag here is actually correct not the python version
-		//FVector Thrust = UEngines::CalculateEngineThrust(Density,Velocity);
+		FVector Thrust = FVector::ZeroVector; 
+		//Something for engine, calculate the engine thrust each frame and update thrust. It should decrease as altitude increases.
+		for (UEngines* Engine : Engines)
+		{
+			if (Engine)
+			{
+				Engine->CalculateEngineThrust(Density, Velocity);
+				Thrust = Engine->Thrust;
+			}
+		}
+		FVector TotalThrust = Thrust * NumEngines; //total thrust is the thrust from each engine * the num of engines
 		//The netforce acting on the object, includes Bforce,Gforce,Drag,Engines and recoil
 		FVector NetForce = BuoyantForce - GravityForce - DragForce; //plus now since the minus is in the vector itself
 		FVector Acceleration = NetForce / Mass;
@@ -108,13 +117,14 @@ void AAirship::Tick(float DeltaTime)
 			   FColor::Yellow,
 			   FString::Printf(TEXT("Atmosphere Data:\n  - Temperature: %.4f\n  - Pressure: %.4f\n  - Density: %.4f\nForces:\n  "
 					  "- Net Force: (%.4f, %.4f, %.4f)\n  - Buoyant Force: (%.4f, %.4f, %.4f)\n  - Gravity Force: (%.4f, %.4f, %.4f)\n"
-					  "  - Drag Force: (%.4f, %.4f, %.4f)\n  - Altitude: %.4f\nPhysics:\n  "
+					  "  - Drag Force: (%.4f, %.4f, %.4f)\n  - Thrust Force: (%.4f, %.4f, %.4f)\n  - Altitude: %.4f\nPhysics:\n  "
 					  "- Acceleration: (%.4f, %.4f, %.4f)\n  - Velocity: (%.4f, %.4f, %.4f)\n"),
 						  Temperature, Pressure, Density,
 						  NetForce.X, NetForce.Y, NetForce.Z,
 						  BuoyantForce.X, BuoyantForce.Y, BuoyantForce.Z,
 						  GravityForce.X, GravityForce.Y, GravityForce.Z,
 						  DragForce.X, DragForce.Y, DragForce.Z,
+						  TotalThrust.X, TotalThrust.Y, TotalThrust.Z,
 						  Altitude,
 						  Acceleration.X, Acceleration.Y, Acceleration.Z,
 						  Velocity.X, Velocity.Y, Velocity.Z));
@@ -170,8 +180,14 @@ void AAirship::SetDefaultPawn()
 FVector AAirship::CalDrag(float Density) const
 {
 	float DragZ = Density / 2 * FMath::Square(Velocity.Z) * CD * LateralArea;
+	float DragY = Density / 2 * FMath::Square(Velocity.Y) * CD * LateralArea;
 	float DragX = Density / 2 * FMath::Square(Velocity.X) * CD * FrontalArea;
-	return FVector(DragX,0.0f,DragZ);
+	return FVector(DragX,DragY,DragZ);//Y isn't actually used but done anyway
+}
+
+void AAirship::DebugText() const
+{
+	
 }
 
 void AAirship::SetAirshipScale(float ScaleFactor)

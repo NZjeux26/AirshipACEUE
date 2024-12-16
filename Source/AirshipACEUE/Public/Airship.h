@@ -72,7 +72,8 @@ protected:
 	void SetDefaultPawn();
 
 	FVector CalDrag(float Density) const;
-	
+
+	void DebugText() const;
 public:
 
 	// Function to set scale and recalculate dimensions

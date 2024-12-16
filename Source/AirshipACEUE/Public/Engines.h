@@ -36,11 +36,7 @@ public:
 	float HorsePower; // Engine horsepower
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Engine Properties")
-	float Thrust; // Current thrust in Newtons
-
-	// Calculate engine thrust
-	UFUNCTION(BlueprintCallable, Category = "Engine Functions")
-	FVector CalculateEngineThrust(float AirDensity, const FVector& AirVelocity);
+	FVector Thrust; // Current thrust in Newtons
 
 protected:
 	// Called when the game starts
@@ -52,4 +48,6 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 	                           FActorComponentTickFunction* ThisTickFunction) override;
+	
+	void CalculateEngineThrust(float AirDensity, const FVector& AirVelocity);
 };

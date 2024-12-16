@@ -14,13 +14,13 @@ UEngines::UEngines()
 	PropEfficiency = 0.0f; // Default propeller efficiency (80%)
 	PropArea = 0.0f;
 	HorsePower = 0.0f;   // Default engine horsepower
-	Thrust = 0.0f;
+	Thrust = FVector(0.0f,0.0f,0.0f);
 }
 
-FVector UEngines::CalculateEngineThrust(float AirDensity, const FVector& AirVelocity)
+void UEngines::CalculateEngineThrust(float AirDensity, const FVector& AirVelocity)
 {
 	// Calculate the thrust for each axis we care about (X and Z)
-	const float ExitVelocity = 3.5f; // Standstill exit velocity
+	constexpr float ExitVelocity = 3.5f; // Standstill exit velocity
 
 	float ThrustX = 0.5f * AirDensity * PropArea * 
 					(FMath::Pow(ExitVelocity, 2) - FMath::Pow(AirVelocity.X, 2));
@@ -29,7 +29,7 @@ FVector UEngines::CalculateEngineThrust(float AirDensity, const FVector& AirVelo
 					(FMath::Pow(ExitVelocity, 2) - FMath::Pow(AirVelocity.Z, 2));
 
 	// Combine the thrusts into a single vector
-	return FVector(ThrustX, 0.0f, ThrustZ);
+	Thrust = FVector(ThrustX, 0.0f, ThrustZ);
 }
 
 // Called when the game starts
@@ -49,7 +49,5 @@ float UEngines::GetPropArea() const
 void UEngines::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	
 }
 
