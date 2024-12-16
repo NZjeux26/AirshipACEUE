@@ -1,4 +1,5 @@
 #pragma once
+#include "Airship.h"
 
 class AIRSHIPACEUE_API BuoyancyData
 {

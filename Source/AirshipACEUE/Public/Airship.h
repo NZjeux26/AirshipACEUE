@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engines.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -47,6 +48,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
 	float Mass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
+	int NumEngines;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Airship Properties")
 	FVector Velocity;
 
@@ -59,21 +63,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	USpringArmComponent* SpringArm;
 
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	// float TargetArmLength;
-	//
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	// float CameraLagSpeed;
-	//
-	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	// float FieldOfView;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Engines")
+	TArray<UEngines*> Engines; // Holds references to all engines
+	
 	// Recalculate dimensions based on the mesh
 	void UpdateDimensionsFromMesh();
 
-	void SetupCamera();
-
 	void SetDefaultPawn();
 
+	FVector CalDrag(float Density) const;
+	
 public:
 
 	// Function to set scale and recalculate dimensions

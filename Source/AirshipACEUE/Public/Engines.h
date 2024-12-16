@@ -40,14 +40,13 @@ public:
 
 	// Calculate engine thrust
 	UFUNCTION(BlueprintCallable, Category = "Engine Functions")
-	float CalculateEngineThrust(float AirDensity, float AirVelocity);
-
+	FVector CalculateEngineThrust(float AirDensity, const FVector& AirVelocity);
 
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	float GetPropArea();
+	float GetPropArea() const;
 
 public:
 	// Called every frame

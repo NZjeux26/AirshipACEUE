@@ -1,8 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Engines.h"
-
 
 // Sets default values for this component's properties
 UEngines::UEngines()
@@ -14,15 +12,24 @@ UEngines::UEngines()
 	FuelFlow = 0.0f;       // Default fuel flow in kg/s
 	PropDiameter = 0.0f;   // Default propeller diameter in meters
 	PropEfficiency = 0.0f; // Default propeller efficiency (80%)
-	
+	PropArea = 0.0f;
 	HorsePower = 0.0f;   // Default engine horsepower
 	Thrust = 0.0f;
 }
 
-
-float UEngines::CalculateEngineThrust(float AirDensity, float AirVelocity)
+FVector UEngines::CalculateEngineThrust(float AirDensity, const FVector& AirVelocity)
 {
-	return 0;
+	// Calculate the thrust for each axis we care about (X and Z)
+	const float ExitVelocity = 3.5f; // Standstill exit velocity
+
+	float ThrustX = 0.5f * AirDensity * PropArea * 
+					(FMath::Pow(ExitVelocity, 2) - FMath::Pow(AirVelocity.X, 2));
+
+	float ThrustZ = 0.5f * AirDensity * PropArea * 
+					(FMath::Pow(ExitVelocity, 2) - FMath::Pow(AirVelocity.Z, 2));
+
+	// Combine the thrusts into a single vector
+	return FVector(ThrustX, 0.0f, ThrustZ);
 }
 
 // Called when the game starts
@@ -32,18 +39,17 @@ void UEngines::BeginPlay()
 	PropArea = GetPropArea();
 }
 
-float UEngines::GetPropArea()
+float UEngines::GetPropArea() const
 {
-	float radius = PropDiameter / 2.0f;
-	return PI * FMath::Pow(radius, 2);
+	const float Radius = PropDiameter / 2.0f;
+	return PI * FMath::Pow(Radius, 2);
 }
-
 
 // Called every frame
 void UEngines::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
+	
 }
 

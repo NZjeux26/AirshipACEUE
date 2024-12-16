@@ -2,10 +2,10 @@
 #include "physicsConstants.h"
 #include "atmosphere.h"
 #include "BuoyancyData.h"
-#include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Engines.h"
 #include "Math/UnitConversion.h"
 
 // Sets default values
@@ -29,12 +29,10 @@ AAirship::AAirship()
 	Diameter = 1.0f; //diameter in meters
 	CD = 0.1f; //Drag coefficient of the airship
 	Mass = 1.0f; //mass of the airship in KG
+	NumEngines = 0;
 	Velocity = FVector::ZeroVector;
 	Position = FVector::ZeroVector;
 	
-	//Base values set to one so cal values are not zero.
-	//**WIll be adding much more but getting the basics in now**
-	//**May be worth having fixed default values for testing**
 }
 
 // Called when the game starts or when spawned
@@ -57,9 +55,17 @@ void AAirship::BeginPlay()
 	 }
 	//Set the airship as the default pawn
 	SetDefaultPawn();
-	//Set up the cameras and spring arm
-	//SetupCamera();
 	
+	// Populate Engines array with all attached engine components
+	GetComponents(Engines);
+	for (UEngines* Engine : Engines)
+	{
+		if (Engine)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Engine found: %s"), *Engine->GetName());
+			Engine->RegisterComponent(); // Ensure it's active
+		}
+	}
 }
 
 // Called every frame does all the checking against the atmo and the object
@@ -67,9 +73,8 @@ void AAirship::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	//gets the current position of the airship, assigns the Z location
-	FVector CurrentLocation = GetActorLocation();
-	float Altitude = CurrentLocation.Z; //this is actually in CM, but we can just treat it as Meters in the math?
-
+	const FVector CurrentLocation = GetActorLocation();
+	const float Altitude = CurrentLocation.Z; //this is actually in CM, but we can just treat it as Meters in the math?
 	//check for the Atmosphere subsystem, if found assign local vars to update each tick by calling the cal functions to
 	//update based on airship position.
 	if (UAtmosphere* AtmosphereSub = GetWorld()->GetSubsystem<UAtmosphere>())
@@ -80,27 +85,39 @@ void AAirship::Tick(float DeltaTime)
 		float Temperature = AtmosphereSub->GetTemperature();
 		float Pressure = AtmosphereSub->GetPressure();
 		float Density = AtmosphereSub->GetDensity(); 
-		//calculate the Bforce and Gforce
-		float BuoyantForce = BuoyancyData::CalculateBuoyancyForce(Density, Volume);  
-		float GravityForce = Mass * PhysicsConstants::GGravityOnEarth; //wait I might not need this because of the UE Gravity
+		//calculate the Bforce and Gforce (now using Vectors)
+		FVector BuoyantForce = FVector(0.0f, 0.0f, BuoyancyData::CalculateBuoyancyForce(Density, Volume));
+		FVector GravityForce = FVector(0.0f, 0.0f, Mass * PhysicsConstants::GGravityOnEarth);
+		FVector DragForce = AAirship::CalDrag(Density); //drag here is actually correct not the python version
+		//FVector Thrust = UEngines::CalculateEngineThrust(Density,Velocity);
 		//The netforce acting on the object, includes Bforce,Gforce,Drag,Engines and recoil
-		float NetForce = BuoyantForce - GravityForce; 
-		float Acceletration = NetForce / Mass;
+		FVector NetForce = BuoyantForce - GravityForce - DragForce; //plus now since the minus is in the vector itself
+		FVector Acceleration = NetForce / Mass;
 		
-		Velocity.Z += Acceletration * DeltaTime;
-		Position = FVector(0.0f, 0.0f, Velocity.Z);
+		Velocity += Acceleration * DeltaTime; //Euler intergration, move to Verlet later
+		Position = Velocity; //this may be wrong and may need to be actually with DT as well. (might be sorted when moved to Verlet)
 
 		AddActorWorldOffset(Position * DeltaTime, true); 
 		
 		//Debugging
 		if (GEngine)
 		{
-		 	GEngine->AddOnScreenDebugMessage(
-		 		-1,
-		 		0.0f,
-		 		FColor::Yellow,
-		 		FString::Printf(TEXT("Temperature: %.4f\nPressure: %.4f\nDensity: %0.4f\nNetForce: %.4f\nBForce: %0.4f\nGForce: %0.4f\nAlt: %.4f\nAcc: %.4f"),
-		 									Temperature, Pressure, Density, NetForce, BuoyantForce, GravityForce,Altitude, Acceletration));
+			GEngine->AddOnScreenDebugMessage(
+			   -1,
+			   0.0f,
+			   FColor::Yellow,
+			   FString::Printf(TEXT("Atmosphere Data:\n  - Temperature: %.4f\n  - Pressure: %.4f\n  - Density: %.4f\nForces:\n  "
+					  "- Net Force: (%.4f, %.4f, %.4f)\n  - Buoyant Force: (%.4f, %.4f, %.4f)\n  - Gravity Force: (%.4f, %.4f, %.4f)\n"
+					  "  - Drag Force: (%.4f, %.4f, %.4f)\n  - Altitude: %.4f\nPhysics:\n  "
+					  "- Acceleration: (%.4f, %.4f, %.4f)\n  - Velocity: (%.4f, %.4f, %.4f)\n"),
+						  Temperature, Pressure, Density,
+						  NetForce.X, NetForce.Y, NetForce.Z,
+						  BuoyantForce.X, BuoyantForce.Y, BuoyantForce.Z,
+						  GravityForce.X, GravityForce.Y, GravityForce.Z,
+						  DragForce.X, DragForce.Y, DragForce.Z,
+						  Altitude,
+						  Acceleration.X, Acceleration.Y, Acceleration.Z,
+						  Velocity.X, Velocity.Y, Velocity.Z));
 		}
 	}
 }
@@ -133,31 +150,6 @@ void AAirship::UpdateDimensionsFromMesh()
 	}
 }
 
-/*void AAirship::SetupCamera()
-{
-	if (SpringArm)
-	{
-		SpringArm->TargetArmLength = TargetArmLength;
-		SpringArm->bEnableCameraLag = true;
-		SpringArm->CameraLagSpeed = CameraLagSpeed;
-		SpringArm->bInheritPitch = true;
-		SpringArm->bInheritYaw = true;
-		SpringArm->bInheritRoll = false;
-	}
-	
-	if (AirshipCamera)
-	{
-		AirshipCamera->FieldOfView = FieldOfView;
-	}
-
-	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-	if (PlayerController && AirshipCamera)
-	{
-		PlayerController->SetViewTargetWithBlend(this, 0.5f);
-	}
-	
-}*/
-
 void AAirship::SetDefaultPawn()
 {
 	// Set the Default Pawn Class dynamically
@@ -173,6 +165,13 @@ void AAirship::SetDefaultPawn()
 	{
 		PlayerController->Possess(this);
 	}
+}
+//return (density / 2) * self.yval**2 * self.cd * self.lateral_area
+FVector AAirship::CalDrag(float Density) const
+{
+	float DragZ = Density / 2 * FMath::Square(Velocity.Z) * CD * LateralArea;
+	float DragX = Density / 2 * FMath::Square(Velocity.X) * CD * FrontalArea;
+	return FVector(DragX,0.0f,DragZ);
 }
 
 void AAirship::SetAirshipScale(float ScaleFactor)
@@ -192,3 +191,5 @@ void AAirship::SetAirshipScale3D(FVector ScaleFactor)
 	// Recalculate dimensions
 	UpdateDimensionsFromMesh();
 }
+
+
