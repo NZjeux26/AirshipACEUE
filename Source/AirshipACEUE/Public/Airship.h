@@ -65,6 +65,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Engines")
 	TArray<UEngines*> Engines; // Holds references to all engines
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Engines")
+	float Throttle;
+	float MaxThrottle;
+	float MinThrottle;
+
+	void ClampThrottle();
 	
 	// Recalculate dimensions based on the mesh
 	void UpdateDimensionsFromMesh();
@@ -73,7 +79,7 @@ protected:
 
 	FVector CalDrag(float Density) const;
 
-	void DebugText() const;
+	
 public:
 
 	// Function to set scale and recalculate dimensions
@@ -82,5 +88,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Airship|Scaling")
 	void SetAirshipScale3D(FVector ScaleFactor);
+
+	// Function to modify throttle
+	void AddThrottle(float Value);
 	
 };

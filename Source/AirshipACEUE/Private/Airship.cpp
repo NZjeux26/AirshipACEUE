@@ -1,4 +1,6 @@
 #include "Airship.h"
+
+#include "AirshipController.h"
 #include "physicsConstants.h"
 #include "atmosphere.h"
 #include "BuoyancyData.h"
@@ -6,7 +8,6 @@
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Engines.h"
-#include "Math/UnitConversion.h"
 
 // Sets default values
 AAirship::AAirship()
@@ -23,7 +24,10 @@ AAirship::AAirship()
 	
 	AirshipCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	AirshipCamera->SetupAttachment(SpringArm);
-	
+
+	MaxThrottle = 1.0f;
+	MinThrottle = -1.0f;
+	Throttle = 0.0f;
 	// Initialise default properties
 	Length = 1.0f; //length in meters
 	Diameter = 1.0f; //diameter in meters
@@ -39,7 +43,7 @@ AAirship::AAirship()
 void AAirship::BeginPlay()
 {
 	Super::BeginPlay();
-	// Calculate dimensions from the mesh commented out for now until meshs for players setup
+	// Calculate dimensions from the mesh commented out for now until meshes for players setup
 	//UpdateDimensionsFromMesh(); 
 	Volume = BuoyancyData::CalVolume(Length, Diameter); //Automatically calculate the volume based off the other values
 	FrontalArea = BuoyancyData::CalFrontalArea(Diameter); //Frontal area of the airship in meters squared
@@ -54,7 +58,7 @@ void AAirship::BeginPlay()
 	 	UE_LOG(LogTemp, Warning, TEXT("Airship gravity enabled: %s"), bIsGravityEnabled ? TEXT("True") : TEXT("False"));
 	 }
 	//Set the airship as the default pawn
-	SetDefaultPawn();
+	//SetDefaultPawn();
 	
 	// Populate Engines array with all attached engine components
 	GetComponents(Engines);
@@ -63,9 +67,15 @@ void AAirship::BeginPlay()
 		if (Engine)
 		{
 			UE_LOG(LogTemp, Log, TEXT("Engine found: %s"), *Engine->GetName());
-			Engine->RegisterComponent(); // Ensure it's act
+			Engine->RegisterComponent(); // Ensure its act
 		}
+		else UE_LOG(LogTemp, Warning, TEXT("Engine not found"));
 	}
+	
+	// if (GetWorld()->GetFirstPlayerController())
+	// {
+	// 	EnableInput(AAirshipController);
+	// }
 }
 
 // Called every frame does all the checking against the atmo and the object
@@ -99,37 +109,47 @@ void AAirship::Tick(float DeltaTime)
 			}
 		}
 		FVector TotalThrust = Thrust * NumEngines; //total thrust is the thrust from each engine * the num of engines
+		FVector Power = TotalThrust * Throttle;
 		//The netforce acting on the object, includes Bforce,Gforce,Drag,Engines and recoil
-		FVector NetForce = BuoyantForce - GravityForce - DragForce; //plus now since the minus is in the vector itself
+		FVector NetForce = BuoyantForce - GravityForce - DragForce + Power; //plus now since the minus is in the vector itself
 		FVector Acceleration = NetForce / Mass;
 		
-		Velocity += Acceleration * DeltaTime; //Euler intergration, move to Verlet later
+		Velocity += Acceleration * DeltaTime; //Euler integration, move to Verlet later
 		Position = Velocity; //this may be wrong and may need to be actually with DT as well. (might be sorted when moved to Verlet)
 
 		AddActorWorldOffset(Position * DeltaTime, true); 
 		
 		//Debugging
 		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(
-			   -1,
-			   0.0f,
-			   FColor::Yellow,
-			   FString::Printf(TEXT("Atmosphere Data:\n  - Temperature: %.4f\n  - Pressure: %.4f\n  - Density: %.4f\nForces:\n  "
-					  "- Net Force: (%.4f, %.4f, %.4f)\n  - Buoyant Force: (%.4f, %.4f, %.4f)\n  - Gravity Force: (%.4f, %.4f, %.4f)\n"
-					  "  - Drag Force: (%.4f, %.4f, %.4f)\n  - Thrust Force: (%.4f, %.4f, %.4f)\n  - Altitude: %.4f\nPhysics:\n  "
-					  "- Acceleration: (%.4f, %.4f, %.4f)\n  - Velocity: (%.4f, %.4f, %.4f)\n"),
-						  Temperature, Pressure, Density,
-						  NetForce.X, NetForce.Y, NetForce.Z,
-						  BuoyantForce.X, BuoyantForce.Y, BuoyantForce.Z,
-						  GravityForce.X, GravityForce.Y, GravityForce.Z,
-						  DragForce.X, DragForce.Y, DragForce.Z,
-						  TotalThrust.X, TotalThrust.Y, TotalThrust.Z,
-						  Altitude,
-						  Acceleration.X, Acceleration.Y, Acceleration.Z,
-						  Velocity.X, Velocity.Y, Velocity.Z));
-		}
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(
+				   -1,
+				   0.0f,
+				   FColor::Yellow,
+				   FString::Printf(TEXT("Atmosphere Data:\n  - Temperature: %.4f\n  - Pressure: %.4f\n  - Density: %.4f\n"
+						"Engines:\n  - Throttle: %.4f\n  - Total Thrust: (%.4f, %.4f, %.4f)\n  - Power: (%.4f, %.4f, %.4f)\n"
+						"Forces:\n  - Net Force: (%.4f, %.4f, %.4f)\n  - Buoyant Force: (%.4f, %.4f, %.4f)\n"
+						"  - Gravity Force: (%.4f, %.4f, %.4f)\n  - Drag Force: (%.4f, %.4f, %.4f)\n"
+						"Physics:\n  - Altitude: %.4f\n  - Acceleration: (%.4f, %.4f, %.4f)\n  - Velocity: (%.4f, %.4f, %.4f)\n"),
+						   Temperature, Pressure, Density,
+						   Throttle,
+						   TotalThrust.X, TotalThrust.Y, TotalThrust.Z,
+						   Power.X, Power.Y, Power.Z,
+						   NetForce.X, NetForce.Y, NetForce.Z,
+						   BuoyantForce.X, BuoyantForce.Y, BuoyantForce.Z,
+						   GravityForce.X, GravityForce.Y, GravityForce.Z,
+						   DragForce.X, DragForce.Y, DragForce.Z,
+						   Altitude,
+						   Acceleration.X, Acceleration.Y, Acceleration.Z,
+						   Velocity.X, Velocity.Y, Velocity.Z));
+			}
 	}
+}
+
+void AAirship::ClampThrottle()
+{
+	Throttle = FMath::Clamp(Throttle, MinThrottle, MaxThrottle);
 }
 
 void AAirship::UpdateDimensionsFromMesh()
@@ -163,17 +183,21 @@ void AAirship::UpdateDimensionsFromMesh()
 void AAirship::SetDefaultPawn()
 {
 	// Set the Default Pawn Class dynamically
-	AGameModeBase* GameMode = GetWorld()->GetAuthGameMode();
-	if (GameMode)
+	if (AGameModeBase* GameMode = GetWorld()->GetAuthGameMode())
 	{
 		GameMode->DefaultPawnClass = StaticClass();
 	}
 
 	// Possess the Airship
-	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-	if (PlayerController)
+	if (AAirshipController* AirshipController = Cast<AAirshipController>(GetWorld()->GetFirstPlayerController()))
 	{
-		PlayerController->Possess(this);
+		AirshipController->Possess(this);
+		UE_LOG(LogTemp, Log, TEXT("PlayerController is now possessing the Airship: %s"), *GetName());
+	}
+
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("No PlayerController found!"));
 	}
 }
 //return (density / 2) * self.yval**2 * self.cd * self.lateral_area
@@ -183,11 +207,6 @@ FVector AAirship::CalDrag(float Density) const
 	float DragY = Density / 2 * FMath::Square(Velocity.Y) * CD * LateralArea;
 	float DragX = Density / 2 * FMath::Square(Velocity.X) * CD * FrontalArea;
 	return FVector(DragX,DragY,DragZ);//Y isn't actually used but done anyway
-}
-
-void AAirship::DebugText() const
-{
-	
 }
 
 void AAirship::SetAirshipScale(float ScaleFactor)
@@ -206,6 +225,12 @@ void AAirship::SetAirshipScale3D(FVector ScaleFactor)
 
 	// Recalculate dimensions
 	UpdateDimensionsFromMesh();
+}
+
+void AAirship::AddThrottle(float Value)
+{
+	Throttle += Value;
+	Throttle = FMath::Clamp(Throttle, MinThrottle, MaxThrottle);
 }
 
 
