@@ -8,6 +8,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Engines.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
 
 // Sets default values
 AAirship::AAirship()
@@ -25,9 +27,9 @@ AAirship::AAirship()
 	AirshipCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	AirshipCamera->SetupAttachment(SpringArm);
 
-	MaxThrottle = 1.0f;
-	MinThrottle = -1.0f;
-	Throttle = 0.0f;
+	MaxThrottle = 100.0f;
+	MinThrottle = -100.0f;
+	Throttle = FVector::ZeroVector;
 	// Initialise default properties
 	Length = 1.0f; //length in meters
 	Diameter = 1.0f; //diameter in meters
@@ -58,7 +60,7 @@ void AAirship::BeginPlay()
 	 	UE_LOG(LogTemp, Warning, TEXT("Airship gravity enabled: %s"), bIsGravityEnabled ? TEXT("True") : TEXT("False"));
 	 }
 	//Set the airship as the default pawn
-	//SetDefaultPawn();
+	SetDefaultPawn();
 	
 	// Populate Engines array with all attached engine components
 	GetComponents(Engines);
@@ -71,13 +73,28 @@ void AAirship::BeginPlay()
 		}
 		else UE_LOG(LogTemp, Warning, TEXT("Engine not found"));
 	}
-	
-	// if (GetWorld()->GetFirstPlayerController())
-	// {
-	// 	EnableInput(AAirshipController);
-	// }
-}
 
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(AirshipMappingContext, 0);
+		}
+	}
+}
+void AAirship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+		EnhancedInputComponent->BindAction(MoveZ, ETriggerEvent::Triggered, this, &AAirship::MoveZAxis);
+		EnhancedInputComponent->BindAction(MoveNz, ETriggerEvent::Triggered, this, &AAirship::MoveNzAxis);
+		EnhancedInputComponent->BindAction(MoveB, ETriggerEvent::Triggered, this, &AAirship::MoveBAxis);
+		EnhancedInputComponent->BindAction(MoveX, ETriggerEvent::Triggered, this, &AAirship::MoveXAxis);
+		EnhancedInputComponent->BindAction(ZeroPower,ETriggerEvent::Triggered, this, &AAirship::ZeroPowerAxis);
+	}
+}
 // Called every frame does all the checking against the atmo and the object
 void AAirship::Tick(float DeltaTime)
 {
@@ -109,7 +126,7 @@ void AAirship::Tick(float DeltaTime)
 			}
 		}
 		FVector TotalThrust = Thrust * NumEngines; //total thrust is the thrust from each engine * the num of engines
-		FVector Power = TotalThrust * Throttle;
+		FVector Power = TotalThrust * (Throttle / 100);
 		//The netforce acting on the object, includes Bforce,Gforce,Drag,Engines and recoil
 		FVector NetForce = BuoyantForce - GravityForce - DragForce + Power; //plus now since the minus is in the vector itself
 		FVector Acceleration = NetForce / Mass;
@@ -121,35 +138,29 @@ void AAirship::Tick(float DeltaTime)
 		
 		//Debugging
 		if (GEngine)
-			if (GEngine)
-			{
-				GEngine->AddOnScreenDebugMessage(
-				   -1,
-				   0.0f,
-				   FColor::Yellow,
-				   FString::Printf(TEXT("Atmosphere Data:\n  - Temperature: %.4f\n  - Pressure: %.4f\n  - Density: %.4f\n"
-						"Engines:\n  - Throttle: %.4f\n  - Total Thrust: (%.4f, %.4f, %.4f)\n  - Power: (%.4f, %.4f, %.4f)\n"
-						"Forces:\n  - Net Force: (%.4f, %.4f, %.4f)\n  - Buoyant Force: (%.4f, %.4f, %.4f)\n"
-						"  - Gravity Force: (%.4f, %.4f, %.4f)\n  - Drag Force: (%.4f, %.4f, %.4f)\n"
-						"Physics:\n  - Altitude: %.4f\n  - Acceleration: (%.4f, %.4f, %.4f)\n  - Velocity: (%.4f, %.4f, %.4f)\n"),
-						   Temperature, Pressure, Density,
-						   Throttle,
-						   TotalThrust.X, TotalThrust.Y, TotalThrust.Z,
-						   Power.X, Power.Y, Power.Z,
-						   NetForce.X, NetForce.Y, NetForce.Z,
-						   BuoyantForce.X, BuoyantForce.Y, BuoyantForce.Z,
-						   GravityForce.X, GravityForce.Y, GravityForce.Z,
-						   DragForce.X, DragForce.Y, DragForce.Z,
-						   Altitude,
-						   Acceleration.X, Acceleration.Y, Acceleration.Z,
-						   Velocity.X, Velocity.Y, Velocity.Z));
-			}
+		{
+			GEngine->AddOnScreenDebugMessage(
+			   -1,
+			   0.0f,
+			   FColor::Yellow,
+			   FString::Printf(TEXT("Atmosphere Data:\n  - Temperature: %.4f\n  - Pressure: %.4f\n  - Density: %.4f\n"
+				  "Engines:\n  - Throttle: (%.4f, %.4f, %.4f)\n  - Total Thrust: (%.4f, %.4f, %.4f)\n  - Power: (%.4f, %.4f, %.4f)\n"
+				  "Forces:\n  - Net Force: (%.4f, %.4f, %.4f)\n  - Buoyant Force: (%.4f, %.4f, %.4f)\n"
+				  "  - Gravity Force: (%.4f, %.4f, %.4f)\n  - Drag Force: (%.4f, %.4f, %.4f)\n"
+				  "Physics:\n  - Altitude: %.4f\n  - Acceleration: (%.4f, %.4f, %.4f)\n  - Velocity: (%.4f, %.4f, %.4f)\n"),
+					 Temperature, Pressure, Density,
+					 Throttle.X, Throttle.Y, Throttle.Z,
+					 TotalThrust.X, TotalThrust.Y, TotalThrust.Z,
+					 Power.X, Power.Y, Power.Z,
+					 NetForce.X, NetForce.Y, NetForce.Z,
+					 BuoyantForce.X, BuoyantForce.Y, BuoyantForce.Z,
+					 GravityForce.X, GravityForce.Y, GravityForce.Z,
+					 DragForce.X, DragForce.Y, DragForce.Z,
+					 Altitude,
+					 Acceleration.X, Acceleration.Y, Acceleration.Z,
+					 Velocity.X, Velocity.Y, Velocity.Z));
+		}
 	}
-}
-
-void AAirship::ClampThrottle()
-{
-	Throttle = FMath::Clamp(Throttle, MinThrottle, MaxThrottle);
 }
 
 void AAirship::UpdateDimensionsFromMesh()
@@ -227,10 +238,34 @@ void AAirship::SetAirshipScale3D(FVector ScaleFactor)
 	UpdateDimensionsFromMesh();
 }
 
-void AAirship::AddThrottle(float Value)
+void AAirship::MoveZAxis()
 {
-	Throttle += Value;
-	Throttle = FMath::Clamp(Throttle, MinThrottle, MaxThrottle);
+	Throttle.Z += 1.0f;
+	Throttle.Z = FMath::Clamp(Throttle.Z, MinThrottle, MaxThrottle);
+	
+}
+
+void AAirship::MoveNzAxis()
+{
+	Throttle.Z += -1.0f;
+	Throttle.Z = FMath::Clamp(Throttle.Z, MinThrottle, MaxThrottle);
+}
+
+void AAirship::MoveBAxis()
+{
+	Throttle.X += 1.0f;
+	Throttle.X = FMath::Clamp(Throttle.X, MinThrottle, MaxThrottle);
+}
+
+void AAirship::MoveXAxis()
+{
+	Throttle.X += -1.0f;
+	Throttle.X = FMath::Clamp(Throttle.X, MinThrottle, MaxThrottle);
+}
+
+void AAirship::ZeroPowerAxis()
+{
+	Throttle = FVector::ZeroVector;
 }
 
 
