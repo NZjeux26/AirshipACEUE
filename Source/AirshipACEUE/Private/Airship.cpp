@@ -34,11 +34,16 @@ AAirship::AAirship()
 	Length = 1.0f; //length in meters
 	Diameter = 1.0f; //diameter in meters
 	CD = 0.1f; //Drag coefficient of the airship
-	Mass = 1.0f; //mass of the airship in KG
+	DryMass = 1.0f;
+	FuelMass = 1.0f;
+	CargoMass = 1.0f;
+	WeaponMass = 1.0f;
+	BallastMass = 1.0f;
+	EngineMass = 1.0f; //mass of the airship in KG
 	NumEngines = 0;
 	Velocity = FVector::ZeroVector;
 	Position = FVector::ZeroVector;
-	
+	TotalMass = 1.0f;
 }
 
 // Called when the game starts or when spawned
@@ -52,7 +57,7 @@ void AAirship::BeginPlay()
 	LateralArea = BuoyancyData::CalLateralArea(Length, Diameter); //Lateral area of the airship in meters squared
 	
 	//Moved here since these should be updated on play after the editor has set the values in the BP
-	// Apply mass to the physics system
+	// Turns off Unreal Physics Gravity system
 	 if (AirshipMesh)
 	 {
 		AirshipMesh->SetEnableGravity(false);
@@ -70,10 +75,11 @@ void AAirship::BeginPlay()
 		{
 			UE_LOG(LogTemp, Log, TEXT("Engine found: %s"), *Engine->GetName());
 			Engine->RegisterComponent(); // Ensure its act
+			EngineMass = Engine->Mass * NumEngines; //gets the mass of the engines and passes it to EngineMass
 		}
 		else UE_LOG(LogTemp, Warning, TEXT("Engine not found"));
 	}
-
+	TotalMass = DryMass + FuelMass + CargoMass + WeaponMass + BallastMass + EngineMass; //Done Here since Mass for engines isn't check until above
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
@@ -85,7 +91,7 @@ void AAirship::BeginPlay()
 void AAirship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
+	//control binding, minds the Blueprint slot with the function that actually does the action, the BP slot will have the Input Action assigned to it
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInputComponent->BindAction(MoveZ, ETriggerEvent::Triggered, this, &AAirship::MoveZAxis);
@@ -107,15 +113,18 @@ void AAirship::Tick(float DeltaTime)
 	{
 		//update the atmo each frame
 		AtmosphereSub->UpdateAtmosphere(Altitude);
+
 		//get the new values
 		float Temperature = AtmosphereSub->GetTemperature();
 		float Pressure = AtmosphereSub->GetPressure();
 		float Density = AtmosphereSub->GetDensity(); 
+
 		//calculate the Bforce and Gforce (now using Vectors)
 		FVector BuoyantForce = FVector(0.0f, 0.0f, BuoyancyData::CalculateBuoyancyForce(Density, Volume));
-		FVector GravityForce = FVector(0.0f, 0.0f, Mass * PhysicsConstants::GGravityOnEarth);
+		FVector GravityForce = FVector(0.0f, 0.0f, TotalMass * PhysicsConstants::GGravityOnEarth);
 		FVector DragForce = AAirship::CalDrag(Density); //drag here is actually correct not the python version
 		FVector Thrust = FVector::ZeroVector; 
+
 		//Something for engine, calculate the engine thrust each frame and update thrust. It should decrease as altitude increases.
 		for (UEngines* Engine : Engines)
 		{
@@ -125,11 +134,13 @@ void AAirship::Tick(float DeltaTime)
 				Thrust = Engine->Thrust;
 			}
 		}
+
 		FVector TotalThrust = Thrust * NumEngines; //total thrust is the thrust from each engine * the num of engines
 		FVector Power = TotalThrust * (Throttle / 100);
+
 		//The netforce acting on the object, includes Bforce,Gforce,Drag,Engines and recoil
 		FVector NetForce = BuoyantForce - GravityForce - DragForce + Power; //plus now since the minus is in the vector itself
-		FVector Acceleration = NetForce / Mass;
+		FVector Acceleration = NetForce / TotalMass;
 		
 		Velocity += Acceleration * DeltaTime; //Euler integration, move to Verlet later
 		Position = Velocity; //this may be wrong and may need to be actually with DT as well. (might be sorted when moved to Verlet)
@@ -144,21 +155,23 @@ void AAirship::Tick(float DeltaTime)
 			   0.0f,
 			   FColor::Yellow,
 			   FString::Printf(TEXT("Atmosphere Data:\n  - Temperature: %.4f\n  - Pressure: %.4f\n  - Density: %.4f\n"
-				  "Engines:\n  - Throttle: (%.4f, %.4f, %.4f)\n  - Total Thrust: (%.4f, %.4f, %.4f)\n  - Power: (%.4f, %.4f, %.4f)\n"
-				  "Forces:\n  - Net Force: (%.4f, %.4f, %.4f)\n  - Buoyant Force: (%.4f, %.4f, %.4f)\n"
-				  "  - Gravity Force: (%.4f, %.4f, %.4f)\n  - Drag Force: (%.4f, %.4f, %.4f)\n"
-				  "Physics:\n  - Altitude: %.4f\n  - Acceleration: (%.4f, %.4f, %.4f)\n  - Velocity: (%.4f, %.4f, %.4f)\n"),
-					 Temperature, Pressure, Density,
-					 Throttle.X, Throttle.Y, Throttle.Z,
-					 TotalThrust.X, TotalThrust.Y, TotalThrust.Z,
-					 Power.X, Power.Y, Power.Z,
-					 NetForce.X, NetForce.Y, NetForce.Z,
-					 BuoyantForce.X, BuoyantForce.Y, BuoyantForce.Z,
-					 GravityForce.X, GravityForce.Y, GravityForce.Z,
-					 DragForce.X, DragForce.Y, DragForce.Z,
-					 Altitude,
-					 Acceleration.X, Acceleration.Y, Acceleration.Z,
-					 Velocity.X, Velocity.Y, Velocity.Z));
+				 "Engines:\n  - Throttle: (%.4f, %.4f, %.4f)\n  - Total Thrust: (%.4f, %.4f, %.4f)\n  - Power: (%.4f, %.4f, %.4f)\n"
+				 "Mass:\n  - Total Mass: %.4f\n  - Engine Mass: %.4f\n"
+				 "Forces:\n  - Net Force: (%.4f, %.4f, %.4f)\n  - Buoyant Force: (%.4f, %.4f, %.4f)\n"
+				 "  - Gravity Force: (%.4f, %.4f, %.4f)\n  - Drag Force: (%.4f, %.4f, %.4f)\n"
+				 "Physics:\n  - Altitude: %.4f\n  - Acceleration: (%.4f, %.4f, %.4f)\n  - Velocity: (%.4f, %.4f, %.4f)\n"),
+				   Temperature, Pressure, Density,
+				   Throttle.X, Throttle.Y, Throttle.Z,
+				   TotalThrust.X, TotalThrust.Y, TotalThrust.Z,
+				   Power.X, Power.Y, Power.Z,
+				   TotalMass, EngineMass,
+				   NetForce.X, NetForce.Y, NetForce.Z,
+				   BuoyantForce.X, BuoyantForce.Y, BuoyantForce.Z,
+				   GravityForce.X, GravityForce.Y, GravityForce.Z,
+				   DragForce.X, DragForce.Y, DragForce.Z,
+				   Altitude,
+				   Acceleration.X, Acceleration.Y, Acceleration.Z,
+				   Velocity.X, Velocity.Y, Velocity.Z));
 		}
 	}
 }
@@ -265,7 +278,7 @@ void AAirship::MoveXAxis()
 
 void AAirship::ZeroPowerAxis()
 {
-	Throttle = FVector::ZeroVector;
+	Throttle = FVector(0,0,0); 
 }
 
 

@@ -48,8 +48,26 @@ protected:
 	float CD;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
-	float Mass;
+	float DryMass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
+	float FuelMass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
+	float BallastMass;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
+	float CargoMass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
+	float WeaponMass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Airship Properties")
+	float TotalMass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Airship Properties")
+	float EngineMass;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
 	int NumEngines;
 
