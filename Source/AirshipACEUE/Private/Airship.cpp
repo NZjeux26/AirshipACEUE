@@ -44,12 +44,21 @@ AAirship::AAirship()
 	Velocity = FVector::ZeroVector;
 	Position = FVector::ZeroVector;
 	TotalMass = 1.0f;
+
+	SmoothedVelocity = FVector::ZeroVector;
+	SmoothedAcceleration = FVector::ZeroVector;
+	SmoothedNetForce = FVector::ZeroVector;
+	SmoothedThrust = FVector::ZeroVector;
+	SmoothedPower = FVector::ZeroVector;
+	SmoothedBForce = FVector::ZeroVector;
+	SmoothedDragForce = FVector::ZeroVector;
 }
 
 // Called when the game starts or when spawned
 void AAirship::BeginPlay()
 {
 	Super::BeginPlay();
+	PreviousPosition = GetActorLocation();
 	// Calculate dimensions from the mesh commented out for now until meshes for players setup
 	//UpdateDimensionsFromMesh(); 
 	Volume = BuoyancyData::CalVolume(Length, Diameter); //Automatically calculate the volume based off the other values
@@ -141,11 +150,22 @@ void AAirship::Tick(float DeltaTime)
 		//The netforce acting on the object, includes Bforce,Gforce,Drag,Engines and recoil
 		FVector NetForce = BuoyantForce - GravityForce - DragForce + Power; //plus now since the minus is in the vector itself
 		FVector Acceleration = NetForce / TotalMass;
-		
-		Velocity += Acceleration * DeltaTime; //Euler integration, move to Verlet later
-		Position = Velocity; //this may be wrong and may need to be actually with DT as well. (might be sorted when moved to Verlet)
 
-		AddActorWorldOffset(Position * DeltaTime, true); 
+		FVector NewLocation = CurrentLocation + (CurrentLocation - PreviousPosition) + Acceleration * FMath::Square(DeltaTime);
+		
+		AddActorWorldOffset(NewLocation - CurrentLocation, true);
+		Velocity = (NewLocation - PreviousPosition) / DeltaTime;
+		PreviousPosition = CurrentLocation;
+
+		// Apply smoothing (Exponential Smoothing)
+		const float Alpha = 0.05f; // Smoothing factor
+		SmoothedVelocity = Alpha * Velocity + (1.0f - Alpha) * SmoothedVelocity;
+		SmoothedAcceleration = Alpha * Acceleration + (1.0f - Alpha) * SmoothedAcceleration;
+		SmoothedNetForce = Alpha * NetForce + (1.0f - Alpha) * SmoothedNetForce;
+		SmoothedDragForce = Alpha * DragForce + (1.0f - Alpha) * SmoothedDragForce;
+		SmoothedThrust = Alpha * TotalThrust + (1.0f - Alpha) * SmoothedThrust;
+		SmoothedPower = Alpha * Power + (1.0f - Alpha) * SmoothedPower;
+		SmoothedBForce = Alpha * BuoyantForce + (1.0f - Alpha) * SmoothedBForce;
 		
 		//Debugging
 		if (GEngine)
@@ -162,16 +182,16 @@ void AAirship::Tick(float DeltaTime)
 				 "Physics:\n  - Altitude: %.4f\n  - Acceleration: (%.4f, %.4f, %.4f)\n  - Velocity: (%.4f, %.4f, %.4f)\n"),
 				   Temperature, Pressure, Density,
 				   Throttle.X, Throttle.Y, Throttle.Z,
-				   TotalThrust.X, TotalThrust.Y, TotalThrust.Z,
-				   Power.X, Power.Y, Power.Z,
+				   SmoothedThrust.X, SmoothedThrust.Y, SmoothedThrust.Z,
+				   SmoothedPower.X, SmoothedPower.Y, SmoothedPower.Z,
 				   TotalMass, EngineMass,
-				   NetForce.X, NetForce.Y, NetForce.Z,
-				   BuoyantForce.X, BuoyantForce.Y, BuoyantForce.Z,
+				   SmoothedNetForce.X, SmoothedNetForce.Y, SmoothedNetForce.Z,
+				   SmoothedBForce.X, SmoothedBForce.Y, SmoothedBForce.Z,
 				   GravityForce.X, GravityForce.Y, GravityForce.Z,
-				   DragForce.X, DragForce.Y, DragForce.Z,
+				   SmoothedDragForce.X, SmoothedDragForce.Y, SmoothedDragForce.Z,
 				   Altitude,
-				   Acceleration.X, Acceleration.Y, Acceleration.Z,
-				   Velocity.X, Velocity.Y, Velocity.Z));
+				   SmoothedAcceleration.X, SmoothedAcceleration.Y, SmoothedAcceleration.Z,
+				   SmoothedVelocity.X, SmoothedVelocity.Y, SmoothedVelocity.Z));
 		}
 	}
 }

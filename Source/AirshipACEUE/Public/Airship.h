@@ -109,7 +109,14 @@ protected:
 	
 	float MaxThrottle;
 	float MinThrottle;
-	
+	FVector PreviousPosition;
+	FVector SmoothedVelocity;
+	FVector SmoothedAcceleration; 
+	FVector SmoothedNetForce;
+	FVector SmoothedThrust;
+	FVector SmoothedPower; 
+	FVector SmoothedBForce;
+	FVector SmoothedDragForce;
 	// Recalculate dimensions based on the mesh
 	void UpdateDimensionsFromMesh();
 
