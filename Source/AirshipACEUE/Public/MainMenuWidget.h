@@ -6,9 +6,6 @@
 #include "Blueprint/UserWidget.h"
 #include "MainMenuWidget.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class AIRSHIPACEUE_API UMainMenuWidget : public UUserWidget
 {
@@ -25,6 +22,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UComboBoxString* AirshipDropdown;
 
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* ErrorText;
+	
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void PopulateAirshipDropdown();
 

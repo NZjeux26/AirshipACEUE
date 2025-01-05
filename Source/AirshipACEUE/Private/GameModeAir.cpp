@@ -26,7 +26,7 @@ void AGameModeAir::BeginPlay()
 		if (GI->SelectedAirship)
 		{
 			// Spawn the selected airship as the player pawn
-			FVector SpawnLocation = FVector(0.0f, 0.0f, 30.0f); // Adjust spawn location as needed
+			FVector SpawnLocation = FVector(0.0f, 0.0f, 10.0f); // Adjust spawn location as needed
 			FRotator SpawnRotation = FRotator::ZeroRotator;
 
 			APawn* PlayerPawn = GetWorld()->SpawnActor<APawn>(GI->SelectedAirship, SpawnLocation, SpawnRotation);

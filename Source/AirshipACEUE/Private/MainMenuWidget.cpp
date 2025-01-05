@@ -6,6 +6,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/Button.h"
 #include "Components/ComboBoxString.h"
+#include "Components/TextBlock.h"
 #include "AirGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -87,13 +88,48 @@ void UMainMenuWidget::PopulateAirshipDropdown()
 void UMainMenuWidget::OnAirshipSelected(FString SelectedItem, ESelectInfo::Type SelectionType)
 {
 	UE_LOG(LogTemp, Log, TEXT("Selected Airship: %s"), *SelectedItem);
+	//Hide the error message when the user selects an airship if the popup is visible.
+	if (ErrorText)
+	{
+		// Hide the error message whenever a selection is made
+		ErrorText->SetVisibility(ESlateVisibility::Hidden);
+	}
 }
 
 void UMainMenuWidget::OnStartButtonClicked()
 {
+	//if airshipdropdown is present, then run the below.
 	if (AirshipDropdown)
 	{
+		// Get the selected option from the dropdown
 		FString SelectedAirshipName = AirshipDropdown->GetSelectedOption();
+
+		// If no airship is selected, show an error
+		if (SelectedAirshipName.IsEmpty())
+		{
+			// Ensure ErrorText exists before using it
+			if (ErrorText)
+			{
+				// Display an error message on the screen
+				ErrorText->SetText(FText::FromString(TEXT("Please select an airship before starting!")));
+				ErrorText->SetVisibility(ESlateVisibility::Visible);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("ErrorText widget not found!"));
+			}
+
+			// Do not proceed to level loading
+			return;
+		}
+
+		// Hide the error message if the selection is valid
+		if (ErrorText)
+		{
+			ErrorText->SetVisibility(ESlateVisibility::Hidden);
+		}
+		
+		//FString SelectedAirshipName = AirshipDropdown->GetSelectedOption();
 		if (!SelectedAirshipName.IsEmpty())
 		{
 			// Construct the path to the selected airship blueprint
@@ -110,6 +146,12 @@ void UMainMenuWidget::OnStartButtonClicked()
 				}
 			}
 		}
+	}
+	//if no dropdown found, exit
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("AirshipDropdown widget not found!"));
+		return;
 	}
 	
 	UGameplayStatics::OpenLevel(this, FName("testlevel"));
