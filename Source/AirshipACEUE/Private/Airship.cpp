@@ -97,6 +97,7 @@ void AAirship::BeginPlay()
 		}
 	}
 }
+//setup for the playinputs, the bind actions for each action is here with the function to be used and the BP function assoication
 void AAirship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);

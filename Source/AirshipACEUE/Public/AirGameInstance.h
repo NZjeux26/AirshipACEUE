@@ -13,4 +13,8 @@ UCLASS()
 class AIRSHIPACEUE_API UAirGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
+public:
+	// Stores the selected airship blueprint class
+	UPROPERTY(BlueprintReadWrite, Category = "Airship")
+	TSubclassOf<class APawn> SelectedAirship;
 };

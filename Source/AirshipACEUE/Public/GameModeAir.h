@@ -16,4 +16,6 @@ class AIRSHIPACEUE_API AGameModeAir : public AGameMode
 
 	public:
 	AGameModeAir();
+protected:
+	virtual void BeginPlay() override;
 };

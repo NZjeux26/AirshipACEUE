@@ -6,6 +6,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/Button.h"
 #include "Components/ComboBoxString.h"
+#include "AirGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 
 void UMainMenuWidget::NativeConstruct()
@@ -90,8 +91,26 @@ void UMainMenuWidget::OnAirshipSelected(FString SelectedItem, ESelectInfo::Type 
 
 void UMainMenuWidget::OnStartButtonClicked()
 {
-	FString SelectedAirship = AirshipDropdown ? AirshipDropdown->GetSelectedOption() : FString("None");
-	UE_LOG(LogTemp, Log, TEXT("Starting with Airship: %s"), *SelectedAirship);
+	if (AirshipDropdown)
+	{
+		FString SelectedAirshipName = AirshipDropdown->GetSelectedOption();
+		if (!SelectedAirshipName.IsEmpty())
+		{
+			// Construct the path to the selected airship blueprint
+			FString Path = "/Game/Airships/" + SelectedAirshipName + "." + SelectedAirshipName + "_C";
+			UClass* AirshipClass = LoadClass<APawn>(nullptr, *Path);
+
+			if (AirshipClass)
+			{
+				// Store the selected airship in the GameInstance
+				if (UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this)))
+				{
+					GI->SelectedAirship = AirshipClass;
+					UE_LOG(LogTemp, Log, TEXT("Selected Airship: %s"), *SelectedAirshipName);
+				}
+			}
+		}
+	}
 	
 	UGameplayStatics::OpenLevel(this, FName("testlevel"));
 }
