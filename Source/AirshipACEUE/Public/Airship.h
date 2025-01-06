@@ -138,4 +138,36 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Airship|Scaling")
 	void SetAirshipScale3D(FVector ScaleFactor);
 	
+	// Getter for FuelMass
+	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
+	float GetFuelMass() const { return FuelMass; }
+
+	// Setter for FuelMass *Might need to add checking for just numbers and not characters
+	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
+	void SetFuelMass(float NewFuelMass);
+
+	// Getter for CargoMass
+	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
+	float GetCargoMass() const { return CargoMass; }
+
+	// Setter for CargoMass
+	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
+	void SetCargoMass(float NewCargoMass); 
+
+	// Getter for BallastMass
+	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
+	float GetBallastMass() const { return BallastMass; }
+
+	// Setter for BallastMass
+	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
+	void SetBallastMass(float NewBallastMass);
+
+	// Getter for BallastMass
+	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
+	float GetWeaponsMass() const { return WeaponMass; }
+
+	// Setter for BallastMass
+	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
+	void SetWeaponsMass(float NewWeaponsMass); 
+	
 };

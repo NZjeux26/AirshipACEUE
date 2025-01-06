@@ -8,6 +8,8 @@
 #include "Components/ComboBoxString.h"
 #include "Components/TextBlock.h"
 #include "AirGameInstance.h"
+#include "Airship.h"
+#include "Components/EditableTextBox.h"
 #include "Kismet/GameplayStatics.h"
 
 void UMainMenuWidget::NativeConstruct()
@@ -25,6 +27,46 @@ void UMainMenuWidget::NativeConstruct()
 	}
 
 	PopulateAirshipDropdown();
+}
+
+void UMainMenuWidget::OnApplyMassChangesClicked()
+{
+	
+}
+
+void UMainMenuWidget::PopulateMassFields()
+{
+	if (!FuelMassBox || !CargoMassBox || !BallastMassBox || !WeaponsMassBox)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Mass input fields not bound properly!"));
+		return;
+	}
+
+	// Get the selected airship class from the GameInstance
+	if (UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this)))
+	{
+		if (GI->SelectedAirship)
+		{
+			// Create a temporary airship actor to access its default properties
+			AAirship* TempAirship = GI->SelectedAirship->GetDefaultObject<AAirship>();
+			if (TempAirship)
+			{
+				// Populate the input fields with current masses
+				FuelMassBox->SetText(FText::AsNumber(TempAirship->GetFuelMass()));
+				CargoMassBox->SetText(FText::AsNumber(TempAirship->GetCargoMass()));
+				BallastMassBox->SetText(FText::AsNumber(TempAirship->GetBallastMass()));
+				WeaponsMassBox->SetText(FText::AsNumber(TempAirship->GetWeaponsMass()));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Failed to retrieve default object of selected airship."));
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("No airship selected to populate masses."));
+		}
+	}
 }
 
 void UMainMenuWidget::PopulateAirshipDropdown()
@@ -84,33 +126,57 @@ void UMainMenuWidget::PopulateAirshipDropdown()
     }
 }
 
-
+//when an airship is selected in the dropdown, it's assigned to the gameinstance as the airship, its mass values are called, and populate the input boxes
 void UMainMenuWidget::OnAirshipSelected(FString SelectedItem, ESelectInfo::Type SelectionType)
 {
 	UE_LOG(LogTemp, Log, TEXT("Selected Airship: %s"), *SelectedItem);
-	//Hide the error message when the user selects an airship if the popup is visible.
+
+	// Hide the error message when the user selects an airship
 	if (ErrorText)
 	{
-		// Hide the error message whenever a selection is made
 		ErrorText->SetVisibility(ESlateVisibility::Hidden);
 	}
-}
 
+	// Store the selected airship in the GameInstance
+	if (!SelectedItem.IsEmpty())
+	{
+		FString Path = "/Game/Airships/" + SelectedItem + "." + SelectedItem + "_C";
+		UClass* AirshipClass = LoadClass<APawn>(nullptr, *Path);
+
+		if (AirshipClass)
+		{
+			if (UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this)))
+			{
+				GI->SelectedAirship = AirshipClass;
+				UE_LOG(LogTemp, Log, TEXT("Selected Airship stored in GameInstance: %s"), *SelectedItem);
+
+				// Optional: Populate mass fields for the selected airship
+				PopulateMassFields();
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No airship selected."));
+	}
+}
+//when the start button is clicked, whatever is the assigned airship in the gameinstance is passed to the level
 void UMainMenuWidget::OnStartButtonClicked()
 {
-	//if airshipdropdown is present, then run the below.
-	if (AirshipDropdown)
+	if (!AirshipDropdown)
 	{
-		// Get the selected option from the dropdown
-		FString SelectedAirshipName = AirshipDropdown->GetSelectedOption();
+		UE_LOG(LogTemp, Error, TEXT("AirshipDropdown widget not found!"));
+		return;
+	}
 
-		// If no airship is selected, show an error
-		if (SelectedAirshipName.IsEmpty())
+	// Get the GameInstance and validate the selection
+	if (UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this)))
+	{
+		if (!GI->SelectedAirship)
 		{
-			// Ensure ErrorText exists before using it
+			// If no airship is selected, show an error
 			if (ErrorText)
 			{
-				// Display an error message on the screen
 				ErrorText->SetText(FText::FromString(TEXT("Please select an airship before starting!")));
 				ErrorText->SetVisibility(ESlateVisibility::Visible);
 			}
@@ -119,41 +185,20 @@ void UMainMenuWidget::OnStartButtonClicked()
 				UE_LOG(LogTemp, Error, TEXT("ErrorText widget not found!"));
 			}
 
-			// Do not proceed to level loading
-			return;
+			return; // Do not proceed
 		}
 
-		// Hide the error message if the selection is valid
-		if (ErrorText)
-		{
-			ErrorText->SetVisibility(ESlateVisibility::Hidden);
-		}
-		
-		//FString SelectedAirshipName = AirshipDropdown->GetSelectedOption();
-		if (!SelectedAirshipName.IsEmpty())
-		{
-			// Construct the path to the selected airship blueprint
-			FString Path = "/Game/Airships/" + SelectedAirshipName + "." + SelectedAirshipName + "_C";
-			UClass* AirshipClass = LoadClass<APawn>(nullptr, *Path);
-
-			if (AirshipClass)
-			{
-				// Store the selected airship in the GameInstance
-				if (UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this)))
-				{
-					GI->SelectedAirship = AirshipClass;
-					UE_LOG(LogTemp, Log, TEXT("Selected Airship: %s"), *SelectedAirshipName);
-				}
-			}
-		}
+		// Log the selected airship
+		UE_LOG(LogTemp, Log, TEXT("Starting game with selected airship."));
 	}
-	//if no dropdown found, exit
-	else
+
+	// Hide the error message before loading the level
+	if (ErrorText)
 	{
-		UE_LOG(LogTemp, Error, TEXT("AirshipDropdown widget not found!"));
-		return;
+		ErrorText->SetVisibility(ESlateVisibility::Hidden);
 	}
-	
+
+	// Proceed to load the level
 	UGameplayStatics::OpenLevel(this, FName("testlevel"));
 }
 

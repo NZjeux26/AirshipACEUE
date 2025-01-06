@@ -272,11 +272,30 @@ void AAirship::SetAirshipScale3D(FVector ScaleFactor)
 	UpdateDimensionsFromMesh();
 }
 
+void AAirship::SetFuelMass(float NewFuelMass)
+{
+	FuelMass = NewFuelMass;
+}
+
+void AAirship::SetCargoMass(float NewCargoMass)
+{
+	CargoMass = NewCargoMass;
+}
+
+void AAirship::SetBallastMass(float NewBallastMass)
+{
+	BallastMass = NewBallastMass;
+}
+
+void AAirship::SetWeaponsMass(float NewWeaponsMass)
+{
+	WeaponMass = NewWeaponsMass;
+}
+
 void AAirship::MoveZAxis()
 {
 	Throttle.Z += 1.0f;
 	Throttle.Z = FMath::Clamp(Throttle.Z, MinThrottle, MaxThrottle);
-	
 }
 
 void AAirship::MoveNzAxis()

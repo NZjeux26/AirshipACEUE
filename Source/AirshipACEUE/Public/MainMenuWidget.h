@@ -25,6 +25,28 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* ErrorText;
 	
+	UPROPERTY(meta = (BindWidget))
+	class UEditableTextBox* FuelMassBox;
+
+	UPROPERTY(meta = (BindWidget))
+	class UEditableTextBox* CargoMassBox;
+
+	UPROPERTY(meta = (BindWidget))
+	class UEditableTextBox* BallastMassBox;
+
+	UPROPERTY(meta = (BindWidget))
+	class UEditableTextBox* WeaponsMassBox;
+	
+	UPROPERTY(meta = (BindWidget))
+	class UButton* ApplyMassChangesButton;
+
+	// Function to handle Apply button click
+	UFUNCTION()
+	void OnApplyMassChangesClicked();
+
+	UFUNCTION()
+	void PopulateMassFields();
+	
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void PopulateAirshipDropdown();
 
