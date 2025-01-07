@@ -28,10 +28,60 @@ void UMainMenuWidget::NativeConstruct()
 
 	PopulateAirshipDropdown();
 }
-
+//When hitting the apply button, get the masses from the user input boxes, check tey are not < 0 and then set them, update total
 void UMainMenuWidget::OnApplyMassChangesClicked()
 {
+	if (!FuelMassBox || !CargoMassBox || !BallastMassBox || !WeaponsMassBox)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Mass input fields not bound properly!"));
+		return;
+	}
 	
+	float FuelMass = FCString::Atof(*FuelMassBox->GetText().ToString());
+	float BallastMass = FCString::Atof(*BallastMassBox->GetText().ToString());
+	float CargoMass = FCString::Atof(*CargoMassBox->GetText().ToString());
+	float WeaponMass = FCString::Atof(*WeaponsMassBox->GetText().ToString());
+	
+	if (FuelMass < 0 || CargoMass < 0 || BallastMass < 0 || WeaponMass < 0)
+	{
+		//ToAdd later, abilty to check for numbers only, and check whether the total mass is > than the MTOW.
+		UE_LOG(LogTemp, Warning, TEXT("Mass values must be non-negative!"));
+		return;
+	}
+	
+	if (UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this)))
+	{
+		if (GI->SelectedAirship)
+		{
+			// Create a temporary airship actor to access its default properties
+			AAirship* TempAirship = GI->SelectedAirship->GetDefaultObject<AAirship>();
+			if (TempAirship)
+			{
+				TempAirship->SetFuelMass(FuelMass);
+				TempAirship->SetBallastMass(BallastMass);
+				TempAirship->SetCargoMass(CargoMass);
+				TempAirship->SetWeaponsMass(WeaponMass);
+				
+				TempAirship->UpdateTotalMass();
+				TotalMassBox->SetText(FText::AsNumber(TempAirship->GetTotalMass()));
+				
+				UE_LOG(LogTemp, Log, TEXT("Updated airship masses: Fuel=%f, Cargo=%f, Ballast=%f, Weapons=%f"),
+				FuelMass, CargoMass, BallastMass, WeaponMass);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Failed to retrieve default object of selected airship."));
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("No airship selected. Cannot apply masses."));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to get GameInstance."));
+	}
 }
 
 void UMainMenuWidget::PopulateMassFields()
@@ -56,6 +106,9 @@ void UMainMenuWidget::PopulateMassFields()
 				CargoMassBox->SetText(FText::AsNumber(TempAirship->GetCargoMass()));
 				BallastMassBox->SetText(FText::AsNumber(TempAirship->GetBallastMass()));
 				WeaponsMassBox->SetText(FText::AsNumber(TempAirship->GetWeaponsMass()));
+				DryMassBox->SetText(FText::AsNumber(TempAirship->GetDryMass()));
+				TempAirship->UpdateTotalMass();
+				TotalMassBox->SetText(FText::AsNumber(TempAirship->GetTotalMass()));
 			}
 			else
 			{
@@ -150,7 +203,7 @@ void UMainMenuWidget::OnAirshipSelected(FString SelectedItem, ESelectInfo::Type 
 				GI->SelectedAirship = AirshipClass;
 				UE_LOG(LogTemp, Log, TEXT("Selected Airship stored in GameInstance: %s"), *SelectedItem);
 
-				// Optional: Populate mass fields for the selected airship
+				//Populate mass fields for the selected airship
 				PopulateMassFields();
 			}
 		}

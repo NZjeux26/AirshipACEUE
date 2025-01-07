@@ -36,6 +36,12 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	class UEditableTextBox* WeaponsMassBox;
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* DryMassBox;
+
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* TotalMassBox;
 	
 	UPROPERTY(meta = (BindWidget))
 	class UButton* ApplyMassChangesButton;

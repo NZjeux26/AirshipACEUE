@@ -88,7 +88,9 @@ void AAirship::BeginPlay()
 		}
 		else UE_LOG(LogTemp, Warning, TEXT("Engine not found"));
 	}
-	TotalMass = DryMass + FuelMass + CargoMass + WeaponMass + BallastMass + EngineMass; //Done Here since Mass for engines isn't check until above
+
+	UpdateTotalMass(); //Done Here since Mass for engines isn't check until above
+
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
@@ -290,6 +292,11 @@ void AAirship::SetBallastMass(float NewBallastMass)
 void AAirship::SetWeaponsMass(float NewWeaponsMass)
 {
 	WeaponMass = NewWeaponsMass;
+}
+
+void AAirship::UpdateTotalMass()
+{
+	TotalMass = DryMass + FuelMass + CargoMass + WeaponMass + BallastMass + EngineMass;
 }
 
 void AAirship::MoveZAxis()
