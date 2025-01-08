@@ -25,6 +25,11 @@ void UMainMenuWidget::NativeConstruct()
 	{
 		AirshipDropdown->OnSelectionChanged.AddDynamic(this, &UMainMenuWidget::OnAirshipSelected);
 	}
+	
+	if (ApplyMassChangesButton)
+	{
+		ApplyMassChangesButton->OnClicked.AddDynamic(this, &UMainMenuWidget::OnApplyMassChangesClicked);
+	}
 
 	PopulateAirshipDropdown();
 }
@@ -36,14 +41,38 @@ void UMainMenuWidget::OnApplyMassChangesClicked()
 		UE_LOG(LogTemp, Error, TEXT("Mass input fields not bound properly!"));
 		return;
 	}
+
+	// Read values as strings from input fields
+	FString FuelMassStr = FuelMassBox->GetText().ToString();
+	FString CargoMassStr = CargoMassBox->GetText().ToString();
+	FString BallastMassStr = BallastMassBox->GetText().ToString();
+	FString WeaponsMassStr = WeaponsMassBox->GetText().ToString();
+
+	//Checks for valid input, EG no blanks or non-numbers
+	if (!IsValidInput(FuelMassStr) || !IsValidInput(CargoMassStr) || !IsValidInput(BallastMassStr) || !IsValidInput(WeaponsMassStr))
+	{
+		if (ErrorText)
+		{
+			ErrorText->SetVisibility(ESlateVisibility::Visible);
+			ErrorText->SetText(FText::FromString(TEXT("Error Mass values must be valid numbers!")));
+		}
+		UE_LOG(LogTemp, Warning, TEXT("All mass values must be valid numbers!"));
+		return;
+	}
+	//convert to floats
+	float FuelMass = FCString::Atof(*FuelMassStr);
+	float BallastMass = FCString::Atof(*BallastMassStr);
+	float CargoMass = FCString::Atof(*CargoMassStr);
+	float WeaponMass = FCString::Atof(*WeaponsMassStr);
 	
-	float FuelMass = FCString::Atof(*FuelMassBox->GetText().ToString());
-	float BallastMass = FCString::Atof(*BallastMassBox->GetText().ToString());
-	float CargoMass = FCString::Atof(*CargoMassBox->GetText().ToString());
-	float WeaponMass = FCString::Atof(*WeaponsMassBox->GetText().ToString());
-	
+	//check they are not negative numbers
 	if (FuelMass < 0 || CargoMass < 0 || BallastMass < 0 || WeaponMass < 0)
 	{
+		if (ErrorText)
+		{
+			ErrorText->SetVisibility(ESlateVisibility::Visible);
+			ErrorText->SetText(FText::FromString(TEXT("Error Mass values must be > 0!")));
+		}
 		//ToAdd later, abilty to check for numbers only, and check whether the total mass is > than the MTOW.
 		UE_LOG(LogTemp, Warning, TEXT("Mass values must be non-negative!"));
 		return;
@@ -53,25 +82,23 @@ void UMainMenuWidget::OnApplyMassChangesClicked()
 	{
 		if (GI->SelectedAirship)
 		{
-			// Create a temporary airship actor to access its default properties
+			if (ErrorText)	ErrorText->SetVisibility(ESlateVisibility::Hidden);	
+			
+			GI->FuelMass = FuelMass;
+			GI->CargoMass = CargoMass;
+			GI->BallastMass = BallastMass;
+			GI->WeaponMass = WeaponMass;
+
+			// Retrieve DryMass from the default object of the selected airship class
 			AAirship* TempAirship = GI->SelectedAirship->GetDefaultObject<AAirship>();
-			if (TempAirship)
-			{
-				TempAirship->SetFuelMass(FuelMass);
-				TempAirship->SetBallastMass(BallastMass);
-				TempAirship->SetCargoMass(CargoMass);
-				TempAirship->SetWeaponsMass(WeaponMass);
-				
-				TempAirship->UpdateTotalMass();
-				TotalMassBox->SetText(FText::AsNumber(TempAirship->GetTotalMass()));
-				
-				UE_LOG(LogTemp, Log, TEXT("Updated airship masses: Fuel=%f, Cargo=%f, Ballast=%f, Weapons=%f"),
-				FuelMass, CargoMass, BallastMass, WeaponMass);
-			}
-			else
-			{
-				UE_LOG(LogTemp, Error, TEXT("Failed to retrieve default object of selected airship."));
-			}
+			float DryMass = TempAirship ? TempAirship->GetDryMass() : 0.0f;
+
+			// Calculate TotalMass including DryMass
+			float TotalMass = DryMass + FuelMass + CargoMass + BallastMass + WeaponMass + 8;
+			//float TotalMass = FuelMass + CargoMass + BallastMass + 8;
+			TotalMassBox->SetText(FText::AsNumber(TotalMass));
+			UE_LOG(LogTemp, Log, TEXT("Updated airship masses: Fuel=%f, Cargo=%f, Ballast=%f, Weapons=%f"),
+			FuelMass, CargoMass, BallastMass, WeaponMass);
 		}
 		else
 		{
@@ -86,7 +113,7 @@ void UMainMenuWidget::OnApplyMassChangesClicked()
 
 void UMainMenuWidget::PopulateMassFields()
 {
-	if (!FuelMassBox || !CargoMassBox || !BallastMassBox || !WeaponsMassBox)
+	if (!FuelMassBox || !CargoMassBox || !BallastMassBox || !WeaponsMassBox ||!EngineMassBox)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Mass input fields not bound properly!"));
 		return;
@@ -107,6 +134,7 @@ void UMainMenuWidget::PopulateMassFields()
 				BallastMassBox->SetText(FText::AsNumber(TempAirship->GetBallastMass()));
 				WeaponsMassBox->SetText(FText::AsNumber(TempAirship->GetWeaponsMass()));
 				DryMassBox->SetText(FText::AsNumber(TempAirship->GetDryMass()));
+				EngineMassBox->SetText(FText::AsNumber(8));//Fixed to 8 for now until I can work a way to get the engine mass
 				TempAirship->UpdateTotalMass();
 				TotalMassBox->SetText(FText::AsNumber(TempAirship->GetTotalMass()));
 			}
@@ -253,5 +281,10 @@ void UMainMenuWidget::OnStartButtonClicked()
 
 	// Proceed to load the level
 	UGameplayStatics::OpenLevel(this, FName("testlevel"));
+}
+
+bool UMainMenuWidget::IsValidInput(const FString& Input)
+{
+	return !Input.IsEmpty() && Input.IsNumeric();
 }
 

@@ -289,6 +289,16 @@ void AAirship::SetBallastMass(float NewBallastMass)
 	BallastMass = NewBallastMass;
 }
 
+void AAirship::GetEngineMass(UEngines* Engine)
+{
+	if (Engine)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Engine found: %s"), *Engine->GetName());
+		EngineMass = Engine->Mass * NumEngines; //gets the mass of the engines and passes it to EngineMass
+	}
+	else UE_LOG(LogTemp, Warning, TEXT("Engine not found"));
+}
+
 void AAirship::SetWeaponsMass(float NewWeaponsMass)
 {
 	WeaponMass = NewWeaponsMass;
@@ -296,7 +306,7 @@ void AAirship::SetWeaponsMass(float NewWeaponsMass)
 
 void AAirship::UpdateTotalMass()
 {
-	TotalMass = DryMass + FuelMass + CargoMass + WeaponMass + BallastMass + EngineMass;
+	TotalMass = DryMass + FuelMass + CargoMass + WeaponMass + BallastMass + 8; //8 is fixed just until enginemass problems sorted
 }
 
 void AAirship::MoveZAxis()

@@ -29,15 +29,27 @@ void AGameModeAir::BeginPlay()
 			FVector SpawnLocation = FVector(0.0f, 0.0f, 10.0f); // Adjust spawn location as needed
 			FRotator SpawnRotation = FRotator::ZeroRotator;
 
-			APawn* PlayerPawn = GetWorld()->SpawnActor<APawn>(GI->SelectedAirship, SpawnLocation, SpawnRotation);
+			AAirship* PlayerAirship = GetWorld()->SpawnActor<AAirship>(GI->SelectedAirship, SpawnLocation, SpawnRotation);
 
-			if (PlayerPawn)
+			if (PlayerAirship)
 			{
+				// Apply masses from GameInstance
+				PlayerAirship->SetFuelMass(GI->FuelMass);
+				PlayerAirship->SetCargoMass(GI->CargoMass);
+				PlayerAirship->SetBallastMass(GI->BallastMass);
+				PlayerAirship->SetWeaponsMass(GI->WeaponMass);
+
+				// Recalculate total mass
+				PlayerAirship->UpdateTotalMass();
+
+				// Possess the airship
 				APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
 				if (PlayerController)
 				{
-					PlayerController->Possess(PlayerPawn);
+					PlayerController->Possess(PlayerAirship);
 				}
+
+				UE_LOG(LogTemp, Log, TEXT("Player airship spawned and possessed successfully."));
 			}
 			else
 			{
@@ -50,3 +62,4 @@ void AGameModeAir::BeginPlay()
 		}
 	}
 }
+

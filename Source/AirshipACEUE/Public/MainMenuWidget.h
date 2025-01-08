@@ -44,6 +44,9 @@ protected:
 	class UTextBlock* TotalMassBox;
 	
 	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* EngineMassBox;
+	
+	UPROPERTY(meta = (BindWidget))
 	class UButton* ApplyMassChangesButton;
 
 	// Function to handle Apply button click
@@ -63,5 +66,8 @@ protected:
 	// Function to handle Start Button click
 	UFUNCTION()
 	void OnStartButtonClicked();
+
+	UFUNCTION()
+	bool IsValidInput(const FString& Input);
 	
 };
