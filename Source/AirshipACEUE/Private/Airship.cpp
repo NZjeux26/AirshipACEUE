@@ -20,10 +20,10 @@ AAirship::AAirship()
 	// Create and attach a static mesh component
 	AirshipMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AirshipMesh"));
 	RootComponent = AirshipMesh;
-
+	//create SpringArm and attach to the mesh
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(AirshipMesh);
-	
+	//setup the camera and attach to the springarm
 	AirshipCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	AirshipCamera->SetupAttachment(SpringArm);
 
@@ -39,12 +39,12 @@ AAirship::AAirship()
 	CargoMass = 1.0f;
 	WeaponMass = 1.0f;
 	BallastMass = 1.0f;
-	EngineMass = 1.0f; //mass of the airship in KG
+	EngineMass = 1.0f; 
 	NumEngines = 0;
 	Velocity = FVector::ZeroVector;
 	Position = FVector::ZeroVector;
 	TotalMass = 1.0f;
-
+	//Smoothed values to get the avg of the values for display
 	SmoothedVelocity = FVector::ZeroVector;
 	SmoothedAcceleration = FVector::ZeroVector;
 	SmoothedNetForce = FVector::ZeroVector;
@@ -90,7 +90,7 @@ void AAirship::BeginPlay()
 	}
 
 	UpdateTotalMass(); //Done Here since Mass for engines isn't check until above
-
+	//Add the mapping for the controls
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))

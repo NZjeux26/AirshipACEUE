@@ -46,6 +46,13 @@ void AGameModeAir::BeginPlay()
 				APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
 				if (PlayerController)
 				{
+					// Reset the input mode to gameplay
+					FInputModeGameOnly InputMode;
+					PlayerController->SetInputMode(InputMode);
+
+					// Hide the mouse cursor
+					PlayerController->bShowMouseCursor = false;
+					//possess the player airship
 					PlayerController->Possess(PlayerAirship);
 				}
 
