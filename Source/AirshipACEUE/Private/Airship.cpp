@@ -20,6 +20,14 @@ AAirship::AAirship()
 	// Create and attach a static mesh component
 	AirshipMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AirshipMesh"));
 	RootComponent = AirshipMesh;
+	
+	// Configure collision for AirshipMesh
+	AirshipMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	AirshipMesh->SetCollisionObjectType(ECollisionChannel::ECC_Pawn);
+	AirshipMesh->SetCollisionResponseToAllChannels(ECR_Block);  // Block everything by default
+	AirshipMesh->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+	AirshipMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	
 	//create SpringArm and attach to the mesh
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(AirshipMesh);
