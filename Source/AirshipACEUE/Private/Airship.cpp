@@ -14,12 +14,15 @@
 // Sets default values
 AAirship::AAirship()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame. You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Create and attach a static mesh component
+	// Create and set a SceneComponent as the root
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
+
+	// Create and attach a static mesh component to the root
 	AirshipMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AirshipMesh"));
-	RootComponent = AirshipMesh;
+	AirshipMesh->SetupAttachment(RootComponent);
 	
 	// Configure collision for AirshipMesh
 	AirshipMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -28,31 +31,34 @@ AAirship::AAirship()
 	AirshipMesh->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 	AirshipMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	
-	//create SpringArm and attach to the mesh
+	// Create a SpringArm and attach to the root
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	SpringArm->SetupAttachment(AirshipMesh);
-	//setup the camera and attach to the springarm
+	SpringArm->SetupAttachment(RootComponent);
+
+	// Setup the camera and attach to the spring arm
 	AirshipCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	AirshipCamera->SetupAttachment(SpringArm);
 
 	MaxThrottle = 100.0f;
 	MinThrottle = -100.0f;
 	Throttle = FVector::ZeroVector;
+
 	// Initialise default properties
-	Length = 1.0f; //length in meters
-	Diameter = 1.0f; //diameter in meters
-	CD = 0.1f; //Drag coefficient of the airship
+	Length = 1.0f; // length in meters
+	Diameter = 1.0f; // diameter in meters
+	CD = 0.1f; // Drag coefficient of the airship
 	DryMass = 1.0f;
 	FuelMass = 1.0f;
 	CargoMass = 1.0f;
 	WeaponMass = 1.0f;
 	BallastMass = 1.0f;
-	EngineMass = 1.0f; 
+	EngineMass = 1.0f;
 	NumEngines = 0;
 	Velocity = FVector::ZeroVector;
 	Position = FVector::ZeroVector;
 	TotalMass = 1.0f;
-	//Smoothed values to get the avg of the values for display
+
+	// Smoothed values to get the avg of the values for display
 	SmoothedVelocity = FVector::ZeroVector;
 	SmoothedAcceleration = FVector::ZeroVector;
 	SmoothedNetForce = FVector::ZeroVector;
