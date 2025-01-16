@@ -22,4 +22,63 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+	
+	// Dry mass of the weapon (kg)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
+	float DryMass;
+
+	// Barrel length (meters)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
+	float BarrelLength;
+
+	// Weapon type (optional for later categorization)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
+	int Type;
+
+	// Max ammo the weapon can carry
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ammo")
+	int32 MaxAmmo;
+
+	// Ammo in the current magazine
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ammo")
+	int32 CurrentMagazineAmmo;
+
+	// Magazine size
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ammo")
+	int32 MagazineSize;
+
+	// Reload time (seconds)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
+	float ReloadTime;
+
+	// Rate of fire (rounds per second)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
+	float RateOfFire;
+
+	// Cartridge mass (kg)** Look at removing
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ammo")
+	float CartridgeMass;
+
+	// Total ammo mass (calculated)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ammo")
+	float TotalAmmoMass;
+
+	// Base Muzzle velocity
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
+	FVector MuzzleVelocity;
+
+	// Number of crew required to operate the weapon
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
+	int32 CrewRequirement;
+
+	// Projectile Blueprint class to spawn
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
+	TSubclassOf<AProjectile> ProjectileClass;
+
+	// Functions for firing and reloading
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void Fire();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void Reload();
 };

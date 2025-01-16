@@ -22,4 +22,32 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	// Initial velocity of the projectile
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
+	float InitialVelocity;
+
+	// Launch angle (in degrees)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
+	float LaunchAngle;
+
+	// Mass of the projectile (kg)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
+	float Mass;
+
+	// Current position of the projectile (world-space, derived from Unreal's transform system)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile Properties")
+	FVector CurrentPosition;
+
+	// Movement component to handle projectile motion
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	class UProjectileMovementComponent* ProjectileMovement;
+
+	// Function to initialize the projectile's motion
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	void InitialiseProjectile(float Velocity, float Angle);
+
+	// Event triggered when the projectile hits something
+	UFUNCTION()
+	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 };

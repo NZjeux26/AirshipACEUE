@@ -106,6 +106,14 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UInputAction* ZeroPower;
+
+	// The Weapon Blueprint to be assigned in the Editor
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapons")
+	TSubclassOf<class AWeapon> WeaponBlueprint;
+
+	// Reference to the spawned weapon
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapons")
+	class AWeapon* WeaponInstance;
 	
 	float MaxThrottle;
 	float MinThrottle;
