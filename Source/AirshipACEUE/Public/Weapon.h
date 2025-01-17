@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Projectile.h"
 #include "GameFramework/Actor.h"
 #include "Weapon.generated.h"
 
@@ -22,7 +23,10 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	
+
+	//Need a mesh for the weapon
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	UStaticMeshComponent* WeaponMesh;
 	// Dry mass of the weapon (kg)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
 	float DryMass;
@@ -33,7 +37,7 @@ public:
 
 	// Weapon type (optional for later categorization)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
-	int Type;
+	int WeaponType;
 
 	// Max ammo the weapon can carry
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ammo")
@@ -65,7 +69,7 @@ public:
 
 	// Base Muzzle velocity
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
-	FVector MuzzleVelocity;
+	float MuzzleVelocity;
 
 	// Number of crew required to operate the weapon
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")

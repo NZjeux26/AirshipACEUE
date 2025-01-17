@@ -167,7 +167,7 @@ void AAirship::Tick(float DeltaTime)
 		//The netforce acting on the object, includes Bforce,Gforce,Drag,Engines and recoil
 		FVector NetForce = BuoyantForce - GravityForce - DragForce + Power; //plus now since the minus is in the vector itself
 		FVector Acceleration = NetForce / TotalMass;
-
+		//verlet intergration
 		FVector NewLocation = CurrentLocation + (CurrentLocation - PreviousPosition) + Acceleration * FMath::Square(DeltaTime);
 		
 		AddActorWorldOffset(NewLocation - CurrentLocation, true);

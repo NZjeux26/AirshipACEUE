@@ -23,6 +23,9 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
+	UStaticMeshComponent* ProjectileMesh;
+	
 	// Initial velocity of the projectile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
 	float InitialVelocity;
