@@ -28,7 +28,7 @@ public:
 	
 	// Initial velocity of the projectile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
-	float InitialVelocity;
+	FVector InitialVelocity;
 
 	// Launch angle (in degrees)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
@@ -45,6 +45,9 @@ public:
 	// Movement component to handle projectile motion
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
 	class UProjectileMovementComponent* ProjectileMovement;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
+	int ProjectileType;
 
 	// Function to initialize the projectile's motion
 	UFUNCTION(BlueprintCallable, Category = "Projectile")

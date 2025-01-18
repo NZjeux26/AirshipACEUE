@@ -15,23 +15,6 @@ public:
 	// Sets default values for this actor's properties
 	AAutoCannon();
 
-	//Need a mesh for the weapon
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
-	UStaticMeshComponent* ProjectileMesh;
-
-	// Dry mass of the weapon (kg)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
-	float ProjectileMass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
-	FVector ProjectileVelocity;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
-	int ProjectileType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
-	float Angle;
-
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
