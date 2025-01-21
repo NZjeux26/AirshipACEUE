@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Engines.h"
 #include "InputMappingContext.h"
+#include "Weapon.h"
+#include "WeaponHardpoint.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -77,6 +79,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
 	FVector Position;
 	
+	// Attribute to define how many hardpoints the airship can have
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
+	int NumHardpoints;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	UCameraComponent* AirshipCamera;
 	
@@ -89,6 +95,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Engines")
 	FVector Throttle;
 
+	// Declare pointers for hardpoints
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hardpoints")
+	UWeaponHardpoint* Hardpoint1;
+
+	// Function to spawn and attach weapons to the hardpoints
+	UFUNCTION(BlueprintCallable, Category = "Weapons")
+	void EquipWeapons();
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UInputMappingContext* AirshipMappingContext;
 
@@ -106,14 +120,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UInputAction* ZeroPower;
-
-	// The Weapon Blueprint to be assigned in the Editor
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapons")
-	TSubclassOf<class AWeapon> WeaponBlueprint;
-
-	// Reference to the spawned weapon
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapons")
-	class AWeapon* WeaponInstance;
 	
 	float MaxThrottle;
 	float MinThrottle;
@@ -127,9 +133,9 @@ protected:
 	FVector SmoothedDragForce;
 	// Recalculate dimensions based on the mesh
 	void UpdateDimensionsFromMesh();
-
 	void SetDefaultPawn();
-
+	void EquipEngines();
+	
 	FVector CalDrag(float Density) const;
 
 	void MoveZAxis();
@@ -137,8 +143,8 @@ protected:
 	void MoveBAxis();
 	void MoveXAxis();
 	void ZeroPowerAxis();
-public:
 
+public:
 	// Function to set scale and recalculate dimensions
 	UFUNCTION(BlueprintCallable, Category = "Airship|Scaling")
 	void SetAirshipScale(float ScaleFactor);

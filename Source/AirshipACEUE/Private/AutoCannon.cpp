@@ -24,7 +24,8 @@ AAutoCannon::AAutoCannon()
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
 	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaonMesh"));
-	
+	WeaponMesh->SetupAttachment(RootComponent);
+	WeaponMesh->SetSimulatePhysics(false);
 }
 
 // Called when the game starts or when spawned

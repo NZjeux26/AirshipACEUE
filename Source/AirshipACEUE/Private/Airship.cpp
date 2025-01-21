@@ -10,6 +10,8 @@
 #include "Engines.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Weapon.h"
+#include "WeaponHardpoint.h"
 
 // Sets default values
 AAirship::AAirship()
@@ -19,7 +21,7 @@ AAirship::AAirship()
 
 	// Create and set a SceneComponent as the root
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
-
+	
 	// Create and attach a static mesh component to the root
 	AirshipMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AirshipMesh"));
 	AirshipMesh->SetupAttachment(RootComponent);
@@ -57,7 +59,8 @@ AAirship::AAirship()
 	Velocity = FVector::ZeroVector;
 	Position = FVector::ZeroVector;
 	TotalMass = 1.0f;
-
+	NumHardpoints = 2;
+	
 	// Smoothed values to get the avg of the values for display
 	SmoothedVelocity = FVector::ZeroVector;
 	SmoothedAcceleration = FVector::ZeroVector;
@@ -89,20 +92,9 @@ void AAirship::BeginPlay()
 	 }
 	//Set the airship as the default pawn
 	SetDefaultPawn();
+	EquipWeapons();//equip the weapons.
+	EquipEngines();
 	
-	// Populate Engines array with all attached engine components
-	GetComponents(Engines);
-	for (UEngines* Engine : Engines)
-	{
-		if (Engine)
-		{
-			UE_LOG(LogTemp, Log, TEXT("Engine found: %s"), *Engine->GetName());
-			Engine->RegisterComponent(); // Ensure its act
-			EngineMass = Engine->Mass * NumEngines; //gets the mass of the engines and passes it to EngineMass
-		}
-		else UE_LOG(LogTemp, Warning, TEXT("Engine not found"));
-	}
-
 	UpdateTotalMass(); //Done Here since Mass for engines isn't check until above
 	//Add the mapping for the controls
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
@@ -259,6 +251,36 @@ void AAirship::SetDefaultPawn()
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("No PlayerController found!"));
+	}
+}
+
+void AAirship::EquipEngines()
+{
+	// Populate Engines array with all attached engine components
+	GetComponents(Engines);
+	for (UEngines* Engine : Engines)
+	{
+		if (Engine)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Engine found: %s"), *Engine->GetName());
+			Engine->RegisterComponent(); // Ensure its act
+			EngineMass = Engine->Mass * NumEngines; //gets the mass of the engines and passes it to EngineMass
+		}
+		else UE_LOG(LogTemp, Warning, TEXT("Engine not found"));
+	}
+}
+
+void AAirship::EquipWeapons()
+{
+	TArray<UWeaponHardpoint*> Hardpoints;//Create an array of hardpoints
+	GetComponents<UWeaponHardpoint>(Hardpoints); // Find all hardpoints attached to the airship
+
+	for (UWeaponHardpoint* Hardpoint : Hardpoints)
+	{
+		if (Hardpoint)
+		{
+			Hardpoint->AttachWeapon(); // Call the hardpoint's weapon attachment function
+		}
 	}
 }
 //return (density / 2) * self.yval**2 * self.cd * self.lateral_area
