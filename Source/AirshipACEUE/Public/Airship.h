@@ -95,9 +95,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Engines")
 	FVector Throttle;
 
-	// Declare pointers for hardpoints
+	// Declare pointers for hardpoints ** This could be deleted
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hardpoints")
 	UWeaponHardpoint* Hardpoint1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hardpoints")
+	TArray<UWeaponHardpoint*> WeaponHardpoints;
 
 	// Function to spawn and attach weapons to the hardpoints
 	UFUNCTION(BlueprintCallable, Category = "Weapons")
@@ -120,6 +123,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UInputAction* ZeroPower;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UUserWidget> CrosshairWidgetClass;
+
+	UPROPERTY()
+	UUserWidget* CrosshairWidget;
 	
 	float MaxThrottle;
 	float MinThrottle;
@@ -137,7 +146,14 @@ protected:
 	void EquipEngines();
 	
 	FVector CalDrag(float Density) const;
-
+	
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	FVector GetMouseWordDirection();
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void UpdateCrosshairPosition();
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void SetupCrossHairWidget();
+	
 	void MoveZAxis();
 	void MoveNzAxis();
 	void MoveBAxis();

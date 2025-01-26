@@ -51,7 +51,7 @@ void AGameModeAir::BeginPlay()
 					PlayerController->SetInputMode(InputMode);
 
 					// Hide the mouse cursor
-					PlayerController->bShowMouseCursor = false;
+					//PlayerController->bShowMouseCursor = false;
 					//possess the player airship
 					PlayerController->Possess(PlayerAirship);
 				}

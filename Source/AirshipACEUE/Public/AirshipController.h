@@ -27,7 +27,7 @@ public:
 	TObjectPtr<UInputAction> MoveAction;
 protected:
 	// BeginPlay is called when the game starts or when the controller is spawned
-	//virtual void BeginPlay() override;
+	virtual void BeginPlay() override;
 
 	// SetupInputComponent is called to bind input actions
 	//virtual void SetupInputComponent() override;
@@ -39,15 +39,15 @@ private:
 
 	
 
-	// Throttle control functions
-	void IncreaseThrottleZ();
-	void DecreaseThrottleZ();
-	void IncreaseThrottleX();
-	void DecreaseThrottleX();
-
-	// Update throttle (optional for future use)
-	void UpdateThrottle(float Value);
-
-	// Set the airship pawn controlled by this controller
-	void SetControlledAirship();
+	// // Throttle control functions
+	// void IncreaseThrottleZ();
+	// void DecreaseThrottleZ();
+	// void IncreaseThrottleX();
+	// void DecreaseThrottleX();
+	//
+	// // Update throttle (optional for future use)
+	// void UpdateThrottle(float Value);
+	//
+	// // Set the airship pawn controlled by this controller
+	// void SetControlledAirship();
 };

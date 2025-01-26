@@ -1,6 +1,7 @@
 #include "Airship.h"
 
 #include "AirshipController.h"
+#include "GameFramework/PlayerController.h"
 #include "physicsConstants.h"
 #include "atmosphere.h"
 #include "BuoyancyData.h"
@@ -12,6 +13,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "Weapon.h"
 #include "WeaponHardpoint.h"
+#include "Blueprint/UserWidget.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
 
 // Sets default values
 AAirship::AAirship()
@@ -103,6 +107,16 @@ void AAirship::BeginPlay()
 		{
 			Subsystem->AddMappingContext(AirshipMappingContext, 0);
 		}
+		// Set input mode to Game Only
+		FInputModeGameOnly InputMode;
+		PlayerController->SetInputMode(InputMode);
+		
+		//enable the mouse
+		PlayerController->bShowMouseCursor = false;
+		PlayerController->bEnableClickEvents = false;
+		PlayerController->bEnableMouseOverEvents = false;
+		// Add the crosshair widget
+		SetupCrossHairWidget();
 	}
 }
 //setup for the playinputs, the bind actions for each action is here with the function to be used and the BP function assoication
@@ -152,10 +166,37 @@ void AAirship::Tick(float DeltaTime)
 				Thrust = Engine->Thrust;
 			}
 		}
+		//updates the position of the CH on the screen
+		UpdateCrosshairPosition();
+		// Get the player controller and mouse direction// This can be all replaced once the crosshair part is setup
+		if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+		{
+			FVector MouseDirection = AAirship::GetMouseWordDirection();
 
+			// Iterate through all hardpoints and aim their mounted weapons
+			for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
+			{
+				if (Hardpoint && Hardpoint->MountedWeapon && Hardpoint->MountedWeapon->WeaponMesh)
+				{
+					// Get weapon's current location
+					FVector WeaponLocation = Hardpoint->MountedWeapon->WeaponMesh->GetComponentLocation();
+
+					// Calculate the target rotation
+					FRotator TargetRotation = MouseDirection.Rotation();
+
+					// Smoothly rotate the weapon toward the target direction
+					Hardpoint->MountedWeapon->WeaponMesh->SetWorldRotation(FMath::RInterpTo(
+						Hardpoint->MountedWeapon->WeaponMesh->GetComponentRotation(),
+						TargetRotation,
+						DeltaTime,
+						10.0f));
+				}
+			}
+		}
+		
 		FVector TotalThrust = Thrust * NumEngines; //total thrust is the thrust from each engine * the num of engines
 		FVector Power = TotalThrust * (Throttle / 100);
-
+		
 		//The netforce acting on the object, includes Bforce,Gforce,Drag,Engines and recoil
 		FVector NetForce = BuoyantForce - GravityForce - DragForce + Power; //plus now since the minus is in the vector itself
 		FVector Acceleration = NetForce / TotalMass;
@@ -201,6 +242,76 @@ void AAirship::Tick(float DeltaTime)
 				   Altitude,
 				   SmoothedAcceleration.X, SmoothedAcceleration.Y, SmoothedAcceleration.Z,
 				   SmoothedVelocity.X, SmoothedVelocity.Y, SmoothedVelocity.Z));
+		}
+	}
+}
+FVector AAirship::GetMouseWordDirection()
+{
+	// Get the player controller
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		// Get the screen location of the mouse
+		float MouseX, MouseY;
+		if (PlayerController->GetMousePosition(MouseX, MouseY))
+		{
+			FVector WorldLocation, WorldDirection;
+            
+			// Deproject the mouse screen position to a world location and direction
+			if (PlayerController->DeprojectScreenPositionToWorld(MouseX, MouseY, WorldLocation, WorldDirection))
+			{
+				return WorldDirection; // Return the world direction
+			}
+		}
+	}
+    
+	return FVector::ZeroVector; // Return zero if something fails
+}
+//checks for a valid crosshairwidget and updates it's poition from the mouse X/Y 
+void AAirship::UpdateCrosshairPosition()
+{
+	if (!CrosshairWidget)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Unable to get the Crosshair Widget!"));
+		return;
+	}
+
+	// Get the player controller
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		float MouseX, MouseY;
+		if (PlayerController->GetMousePosition(MouseX, MouseY))
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("Mouse Position: X=%f, Y=%f"), MouseX, MouseY);
+
+			// Update the widget's position directly in the viewport
+			CrosshairWidget->SetPositionInViewport(FVector2D(MouseX, MouseY), true);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Unable to get mouse position!"));
+		}
+	}
+}
+
+void AAirship::SetupCrossHairWidget()
+{
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{	//checks if there is a valid crosswidget assigned, if yes assign it to the crosshair var and add to the viewport.
+		if (CrosshairWidgetClass) // Ensure the class reference is valid
+		{
+			CrosshairWidget = CreateWidget<UUserWidget>(PlayerController, CrosshairWidgetClass);
+			if (CrosshairWidget) // Ensure the widget instance was created successfully
+			{
+				CrosshairWidget->AddToViewport();
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Failed to create Crosshair Widget!"));
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("CrosshairWidgetClass is null! Make sure to assign it in the Blueprint or defaults."));
 		}
 	}
 }
@@ -272,10 +383,9 @@ void AAirship::EquipEngines()
 
 void AAirship::EquipWeapons()
 {
-	TArray<UWeaponHardpoint*> Hardpoints;//Create an array of hardpoints
-	GetComponents<UWeaponHardpoint>(Hardpoints); // Find all hardpoints attached to the airship
-
-	for (UWeaponHardpoint* Hardpoint : Hardpoints)
+	//TArray<UWeaponHardpoint*> Hardpoints;//Create an array of hardpoints
+	GetComponents<UWeaponHardpoint>(WeaponHardpoints); // Find all hardpoints attached to the airship
+	for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
 	{
 		if (Hardpoint)
 		{

@@ -1,4 +1,4 @@
-/*
+
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AirshipController.h"
@@ -11,23 +11,8 @@
 void AAirshipController::BeginPlay()
 {
     Super::BeginPlay();
-
-    // Add the input mapping context to the player's Enhanced Input Subsystem
-    if (APlayerController* PC = Cast<APlayerController>(this))
-    {
-        if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
-        {
-            Subsystem->AddMappingContext(InputMappingContext, 0);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("InputMappingContext is null in AirshipController!"));
-        }
-    }
-    SetupInputComponent();
-    SetControlledAirship();
 }
-
+/*
 // Called to bind functionality to input
 void AAirshipController::SetupInputComponent()
 {
