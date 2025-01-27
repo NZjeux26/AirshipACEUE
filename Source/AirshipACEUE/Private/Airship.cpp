@@ -112,7 +112,7 @@ void AAirship::BeginPlay()
 		PlayerController->SetInputMode(InputMode);
 		
 		//enable the mouse
-		PlayerController->bShowMouseCursor = false;
+		PlayerController->bShowMouseCursor = true;
 		PlayerController->bEnableClickEvents = false;
 		PlayerController->bEnableMouseOverEvents = false;
 		// Add the crosshair widget
@@ -168,31 +168,7 @@ void AAirship::Tick(float DeltaTime)
 		}
 		//updates the position of the CH on the screen
 		UpdateCrosshairPosition();
-		// Get the player controller and mouse direction// This can be all replaced once the crosshair part is setup
-		if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-		{
-			FVector MouseDirection = AAirship::GetMouseWordDirection();
-
-			// Iterate through all hardpoints and aim their mounted weapons
-			for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
-			{
-				if (Hardpoint && Hardpoint->MountedWeapon && Hardpoint->MountedWeapon->WeaponMesh)
-				{
-					// Get weapon's current location
-					FVector WeaponLocation = Hardpoint->MountedWeapon->WeaponMesh->GetComponentLocation();
-
-					// Calculate the target rotation
-					FRotator TargetRotation = MouseDirection.Rotation();
-
-					// Smoothly rotate the weapon toward the target direction
-					Hardpoint->MountedWeapon->WeaponMesh->SetWorldRotation(FMath::RInterpTo(
-						Hardpoint->MountedWeapon->WeaponMesh->GetComponentRotation(),
-						TargetRotation,
-						DeltaTime,
-						10.0f));
-				}
-			}
-		}
+		AimWeaponsAtMouse(DeltaTime);
 		
 		FVector TotalThrust = Thrust * NumEngines; //total thrust is the thrust from each engine * the num of engines
 		FVector Power = TotalThrust * (Throttle / 100);
@@ -245,27 +221,7 @@ void AAirship::Tick(float DeltaTime)
 		}
 	}
 }
-FVector AAirship::GetMouseWordDirection()
-{
-	// Get the player controller
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-	{
-		// Get the screen location of the mouse
-		float MouseX, MouseY;
-		if (PlayerController->GetMousePosition(MouseX, MouseY))
-		{
-			FVector WorldLocation, WorldDirection;
-            
-			// Deproject the mouse screen position to a world location and direction
-			if (PlayerController->DeprojectScreenPositionToWorld(MouseX, MouseY, WorldLocation, WorldDirection))
-			{
-				return WorldDirection; // Return the world direction
-			}
-		}
-	}
-    
-	return FVector::ZeroVector; // Return zero if something fails
-}
+
 //checks for a valid crosshairwidget and updates it's poition from the mouse X/Y 
 void AAirship::UpdateCrosshairPosition()
 {
@@ -288,7 +244,7 @@ void AAirship::UpdateCrosshairPosition()
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("Unable to get mouse position!"));
+			//UE_LOG(LogTemp, Error, TEXT("Unable to get mouse position!"));
 		}
 	}
 }
@@ -314,6 +270,66 @@ void AAirship::SetupCrossHairWidget()
 			UE_LOG(LogTemp, Error, TEXT("CrosshairWidgetClass is null! Make sure to assign it in the Blueprint or defaults."));
 		}
 	}
+}
+
+void AAirship::AimWeaponsAtMouse(float DeltaTime)
+{
+    if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+    {
+        float MouseX, MouseY;
+        if (PlayerController->GetMousePosition(MouseX, MouseY))
+        {
+            // Deproject the screen position into a world direction
+            FVector WorldLocation, WorldDirection;
+            if (PlayerController->DeprojectScreenPositionToWorld(MouseX, MouseY, WorldLocation, WorldDirection))
+            {
+                // Get the airship's world location
+                FVector AirshipWorldLocation = GetActorLocation();
+
+                // Project the mouse's world position onto the X-Z plane of the side-scroller
+                // We assume the "forward" gameplay happens on the X-Z plane (lock Y to the airship's depth)
+                FVector AimTarget = WorldLocation + (WorldDirection * 10000.0f); // Extend direction into the distance
+                AimTarget.Y = AirshipWorldLocation.Y; // Lock depth (Y-axis) to airship's plane
+
+                // Calculate the direction from the airship to the aim target
+                FVector AimDirection = (AimTarget - AirshipWorldLocation).GetSafeNormal();
+
+                if (AimDirection.SizeSquared() > 0.001f) // Ensure valid direction
+                {
+                    // Debug line to visualize aim direction
+                    DrawDebugLine(
+                        GetWorld(),
+                        AirshipWorldLocation,                       // Start point
+                        AirshipWorldLocation + AimDirection * 500.0f, // End point (scaled direction)
+                        FColor::Green,                              // Color
+                        false,                                      // Persistent (set to true for longer duration)
+                        -1.0f,                                      // Lifetime (-1 = single frame)
+                        0,                                          // Depth priority
+                        2.0f                                        // Thickness
+                    );
+
+                    // Calculate the rotation to align with the target
+                    FRotator TargetRotation = FRotationMatrix::MakeFromX(AimDirection).Rotator();
+
+                    // Apply the rotation smoothly to each weapon
+                    for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
+                    {
+                        if (Hardpoint && Hardpoint->MountedWeapon && Hardpoint->MountedWeapon->WeaponMesh)
+                        {
+                            Hardpoint->MountedWeapon->WeaponMesh->SetWorldRotation(
+                                FMath::RInterpTo(
+                                    Hardpoint->MountedWeapon->WeaponMesh->GetComponentRotation(),
+                                    TargetRotation,
+                                    DeltaTime,
+                                    10.0f // Interpolation speed
+                                )
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 void AAirship::UpdateDimensionsFromMesh()

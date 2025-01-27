@@ -102,6 +102,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hardpoints")
 	TArray<UWeaponHardpoint*> WeaponHardpoints;
 
+	UFUNCTION(BlueprintCallable, Category = "Weapons")
+	void AimWeaponsAtMouse(float DeltaTime);
 	// Function to spawn and attach weapons to the hardpoints
 	UFUNCTION(BlueprintCallable, Category = "Weapons")
 	void EquipWeapons();
@@ -147,8 +149,6 @@ protected:
 	
 	FVector CalDrag(float Density) const;
 	
-	UFUNCTION(BlueprintCallable, Category = "UI")
-	FVector GetMouseWordDirection();
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void UpdateCrosshairPosition();
 	UFUNCTION(BlueprintCallable, Category = "UI")
