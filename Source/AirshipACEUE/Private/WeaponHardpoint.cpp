@@ -44,6 +44,10 @@ void UWeaponHardpoint::AttachWeapon()
 			MountedWeapon = SpawnedWeapon;
 
 			UE_LOG(LogTemp, Warning, TEXT("Weapon %s mounted on hardpoint %s"), *SpawnedWeapon->GetName(), *GetName());
+			UE_LOG(LogTemp, Warning, TEXT("Hardpoint: %s Location: %s Rotation: %s"),
+			   *GetName(),
+			   *GetComponentLocation().ToString(),
+			   *GetComponentRotation().ToString());
 		}
 		else
 		{

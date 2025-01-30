@@ -103,7 +103,8 @@ protected:
 	TArray<UWeaponHardpoint*> WeaponHardpoints;
 
 	UFUNCTION(BlueprintCallable, Category = "Weapons")
-	void AimWeaponsAtMouse(float DeltaTime);
+	void AimWeaponsAtMouse(float DeltaTime, UWeaponHardpoint* Hardpoint);
+
 	// Function to spawn and attach weapons to the hardpoints
 	UFUNCTION(BlueprintCallable, Category = "Weapons")
 	void EquipWeapons();
@@ -126,6 +127,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UInputAction* ZeroPower;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* FireWeapon;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<UUserWidget> CrosshairWidgetClass;
 
@@ -159,6 +163,7 @@ protected:
 	void MoveBAxis();
 	void MoveXAxis();
 	void ZeroPowerAxis();
+	void FireWeapons();
 
 public:
 	// Function to set scale and recalculate dimensions

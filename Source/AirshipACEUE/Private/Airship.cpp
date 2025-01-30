@@ -112,7 +112,7 @@ void AAirship::BeginPlay()
 		PlayerController->SetInputMode(InputMode);
 		
 		//enable the mouse
-		PlayerController->bShowMouseCursor = true;
+		PlayerController->bShowMouseCursor = false;
 		PlayerController->bEnableClickEvents = false;
 		PlayerController->bEnableMouseOverEvents = false;
 		// Add the crosshair widget
@@ -131,6 +131,7 @@ void AAirship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		EnhancedInputComponent->BindAction(MoveB, ETriggerEvent::Triggered, this, &AAirship::MoveBAxis);
 		EnhancedInputComponent->BindAction(MoveX, ETriggerEvent::Triggered, this, &AAirship::MoveXAxis);
 		EnhancedInputComponent->BindAction(ZeroPower,ETriggerEvent::Triggered, this, &AAirship::ZeroPowerAxis);
+		EnhancedInputComponent->BindAction(FireWeapon,ETriggerEvent::Triggered,this,&AAirship::FireWeapons);
 	}
 }
 // Called every frame does all the checking against the atmo and the object
@@ -168,7 +169,14 @@ void AAirship::Tick(float DeltaTime)
 		}
 		//updates the position of the CH on the screen
 		UpdateCrosshairPosition();
-		AimWeaponsAtMouse(DeltaTime);
+		//foreach weapon in the array, aim towards the mouse. Now I can put this forloop in the actual function as well but choose to put it here.
+		for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
+		{
+			if (Hardpoint && Hardpoint->MountedWeapon && Hardpoint->MountedWeapon->WeaponMesh)
+			{
+				AimWeaponsAtMouse(DeltaTime, Hardpoint);
+			}
+		}
 		
 		FVector TotalThrust = Thrust * NumEngines; //total thrust is the thrust from each engine * the num of engines
 		FVector Power = TotalThrust * (Throttle / 100);
@@ -272,60 +280,40 @@ void AAirship::SetupCrossHairWidget()
 	}
 }
 
-void AAirship::AimWeaponsAtMouse(float DeltaTime)
+void AAirship::AimWeaponsAtMouse(float DeltaTime, UWeaponHardpoint* Hardpoint)
 {
     if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
     {
         float MouseX, MouseY;
         if (PlayerController->GetMousePosition(MouseX, MouseY))
         {
-            // Deproject the screen position into a world direction
             FVector WorldLocation, WorldDirection;
             if (PlayerController->DeprojectScreenPositionToWorld(MouseX, MouseY, WorldLocation, WorldDirection))
             {
-                // Get the airship's world location
                 FVector AirshipWorldLocation = GetActorLocation();
-
-                // Project the mouse's world position onto the X-Z plane of the side-scroller
-                // We assume the "forward" gameplay happens on the X-Z plane (lock Y to the airship's depth)
-                FVector AimTarget = WorldLocation + (WorldDirection * 10000.0f); // Extend direction into the distance
-                AimTarget.Y = AirshipWorldLocation.Y; // Lock depth (Y-axis) to airship's plane
-
-                // Calculate the direction from the airship to the aim target
+                FVector AimTarget = WorldLocation + (WorldDirection * 10000.0f);
+                AimTarget.Y = AirshipWorldLocation.Y;
                 FVector AimDirection = (AimTarget - AirshipWorldLocation).GetSafeNormal();
 
-                if (AimDirection.SizeSquared() > 0.001f) // Ensure valid direction
+                if (AimDirection.SizeSquared() > 0.001f)
                 {
-                    // Debug line to visualize aim direction
-                    DrawDebugLine(
-                        GetWorld(),
-                        AirshipWorldLocation,                       // Start point
-                        AirshipWorldLocation + AimDirection * 500.0f, // End point (scaled direction)
-                        FColor::Green,                              // Color
-                        false,                                      // Persistent (set to true for longer duration)
-                        -1.0f,                                      // Lifetime (-1 = single frame)
-                        0,                                          // Depth priority
-                        2.0f                                        // Thickness
-                    );
+                    FRotator BaseAimRotation = FRotationMatrix::MakeFromX(AimDirection).Rotator();
 
-                    // Calculate the rotation to align with the target
-                    FRotator TargetRotation = FRotationMatrix::MakeFromX(AimDirection).Rotator();
+                	// Get the weapon's initial relative rotation to the airship
+                	FRotator WeaponBaseRotation = Hardpoint->GetRelativeRotation();
+                            
+                	// Add the base rotation to the aim rotation
+                	FRotator TargetRotation = BaseAimRotation + WeaponBaseRotation;
 
-                    // Apply the rotation smoothly to each weapon
-                    for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
-                    {
-                        if (Hardpoint && Hardpoint->MountedWeapon && Hardpoint->MountedWeapon->WeaponMesh)
-                        {
-                            Hardpoint->MountedWeapon->WeaponMesh->SetWorldRotation(
-                                FMath::RInterpTo(
-                                    Hardpoint->MountedWeapon->WeaponMesh->GetComponentRotation(),
-                                    TargetRotation,
-                                    DeltaTime,
-                                    10.0f // Interpolation speed
-                                )
-                            );
-                        }
-                    }
+                	// Smoothly interpolate to the target rotation
+                	Hardpoint->MountedWeapon->WeaponMesh->SetWorldRotation(
+						FMath::RInterpTo(
+							Hardpoint->MountedWeapon->WeaponMesh->GetComponentRotation(),
+							TargetRotation,
+							DeltaTime,
+							10.0f
+						)
+					);
                 }
             }
         }
@@ -399,16 +387,22 @@ void AAirship::EquipEngines()
 
 void AAirship::EquipWeapons()
 {
-	//TArray<UWeaponHardpoint*> Hardpoints;//Create an array of hardpoints
-	GetComponents<UWeaponHardpoint>(WeaponHardpoints); // Find all hardpoints attached to the airship
+	WeaponHardpoints.Empty(); // Ensure the array is empty before populating
+
+	GetComponents<UWeaponHardpoint>(WeaponHardpoints); // Find all attached hardpoints
+
 	for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
 	{
 		if (Hardpoint)
 		{
-			Hardpoint->AttachWeapon(); // Call the hardpoint's weapon attachment function
+			UE_LOG(LogTemp, Warning, TEXT("Found Hardpoint: %s"), *Hardpoint->GetName());
+			Hardpoint->AttachWeapon(); // Attach weapon
 		}
 	}
+
+	UE_LOG(LogTemp, Warning, TEXT("%d Hardpoints Found!"), WeaponHardpoints.Num());
 }
+
 //return (density / 2) * self.yval**2 * self.cd * self.lateral_area
 FVector AAirship::CalDrag(float Density) const
 {
@@ -499,5 +493,22 @@ void AAirship::ZeroPowerAxis()
 {
 	Throttle = FVector(0,0,0); 
 }
+
+void AAirship::FireWeapons()
+{
+	for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
+	{
+		if (Hardpoint && Hardpoint->MountedWeapon) // Ensure Hardpoint and Weapon exist
+		{
+			UE_LOG(LogTemp, Log, TEXT("Firing weapon on hardpoint: %s"), *Hardpoint->MountedWeapon->GetName());
+			Hardpoint->MountedWeapon->Fire();
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Null hardpoint or missing weapon!"));
+		}
+	}
+}
+
 
 
