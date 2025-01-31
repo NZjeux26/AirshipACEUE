@@ -239,20 +239,25 @@ void AAirship::UpdateCrosshairPosition()
 		return;
 	}
 
-	// Get the player controller
-	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-	{
-		float MouseX, MouseY;
-		if (PlayerController->GetMousePosition(MouseX, MouseY))
-		{
-			//UE_LOG(LogTemp, Warning, TEXT("Mouse Position: X=%f, Y=%f"), MouseX, MouseY);
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController) return;
 
-			// Update the widget's position directly in the viewport
-			CrosshairWidget->SetPositionInViewport(FVector2D(MouseX, MouseY), true);
-		}
-		else
+	float MouseX, MouseY;
+	if (PlayerController->GetMousePosition(MouseX, MouseY))
+	{
+		// Update the UI crosshair position
+		CrosshairWidget->SetPositionInViewport(FVector2D(MouseX, MouseY), true);
+
+		// Convert crosshair screen position to world-space
+		FVector WorldLocation, WorldDirection;
+		if (PlayerController->DeprojectScreenPositionToWorld(MouseX, MouseY, WorldLocation, WorldDirection))
 		{
-			//UE_LOG(LogTemp, Error, TEXT("Unable to get mouse position!"));
+			// Ensure the crosshair stays in the 2D plane by locking Y to the airship's Y position
+			FVector AirshipWorldLocation = GetActorLocation();
+			CrosshairWorldPosition = WorldLocation + (WorldDirection * 10000.0f);
+			CrosshairWorldPosition.Y = AirshipWorldLocation.Y;
+
+			//UE_LOG(LogTemp, Log, TEXT("Crosshair world position updated: %s"), *CrosshairWorldPosition.ToString());
 		}
 	}
 }
@@ -463,6 +468,11 @@ void AAirship::SetWeaponsMass(float NewWeaponsMass)
 void AAirship::UpdateTotalMass()
 {
 	TotalMass = DryMass + FuelMass + CargoMass + WeaponMass + BallastMass + 8; //8 is fixed just until enginemass problems sorted
+}
+
+FVector AAirship::GetCrosshairWorldPosition()
+{
+	return CrosshairWorldPosition;
 }
 
 void AAirship::MoveZAxis()

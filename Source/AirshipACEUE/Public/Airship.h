@@ -135,6 +135,9 @@ protected:
 
 	UPROPERTY()
 	UUserWidget* CrosshairWidget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crosshair")
+	FVector CrosshairWorldPosition;
 	
 	float MaxThrottle;
 	float MinThrottle;
@@ -219,4 +222,7 @@ public:
 	// Setter for BallastMass
 	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
 	void UpdateTotalMass();
+
+	UFUNCTION(BlueprintCallable, Category = "Crosshair")
+	FVector GetCrosshairWorldPosition();
 };

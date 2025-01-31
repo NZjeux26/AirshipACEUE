@@ -18,11 +18,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	UStaticMeshComponent* ProjectileMesh;
 	
@@ -41,14 +37,18 @@ public:
 	// Current position of the projectile (world-space, derived from Unreal's transform system)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile Properties")
 	FVector CurrentPosition;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
+	int ProjectileType;
 
 	// Movement component to handle projectile motion
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
 	class UProjectileMovementComponent* ProjectileMovement;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile Properties")
-	int ProjectileType;
-
+public:
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+	
 	// Function to initialize the projectile's motion
 	UFUNCTION(BlueprintCallable, Category = "Projectile")
 	void InitialiseProjectile(float Velocity, float Angle);

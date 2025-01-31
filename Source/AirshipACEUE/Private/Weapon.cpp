@@ -3,14 +3,14 @@
 
 #include "Weapon.h"
 
-#include "Kismet/GameplayStatics.h"
+#include "Airship.h"
 
 
 // Sets default values
 AWeapon::AWeapon()
 {
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+    // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+    PrimaryActorTick.bCanEverTick = true;
 }
 
 // Called when the game starts or when spawned
@@ -28,102 +28,69 @@ void AWeapon::Tick(float DeltaTime)
 
 void AWeapon::Fire()
 {
-    UE_LOG(LogTemp, Log, TEXT("%s is attempting to fire"), *GetName());
-
-    // Ensure ammo is available
     if (CurrentMagazineAmmo <= 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Weapon %s is out of ammo!"), *GetName());
+        UE_LOG(LogTemp, Warning, TEXT("Out of ammo!"));
         return;
     }
 
-    // Ensure the projectile class is set
     if (!ProjectileClass)
     {
-        UE_LOG(LogTemp, Error, TEXT("Weapon %s has no ProjectileClass assigned!"), *GetName());
+        UE_LOG(LogTemp, Error, TEXT("ProjectileClass is NULL!"));
         return;
     }
 
-    // Ensure WeaponMesh exists
+    // Get the airship (assumes the weapon is attached to it)
+    AAirship* Airship = Cast<AAirship>(GetOwner());
+    if (!Airship)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Fire(): Weapon has no valid Airship owner!"));
+        return;
+    }
+
+    // Get the crosshair's global world position (assuming AAirship has a stored FVector for it)
+    FVector CrosshairWorldPosition = Airship->GetCrosshairWorldPosition(); // Ensure this function exists in AAirship
+
+    // Get the weapon's muzzle location
     if (!WeaponMesh)
     {
-        UE_LOG(LogTemp, Error, TEXT("Weapon %s has no WeaponMesh!"), *GetName());
+        UE_LOG(LogTemp, Error, TEXT("Fire(): WeaponMesh is NULL!"));
         return;
     }
 
-    // Get the muzzle location
     FVector MuzzleLocation = WeaponMesh->GetSocketLocation(TEXT("Muzzle"));
-    UE_LOG(LogTemp, Log, TEXT("Muzzle location: %s"), *MuzzleLocation.ToString());
+    UE_LOG(LogTemp, Log, TEXT("Muzzle location: X=%f, Y=%f, Z=%f"), MuzzleLocation.X, MuzzleLocation.Y, MuzzleLocation.Z);
+    UE_LOG(LogTemp, Log, TEXT("Crosshair world position: X=%f, Y=%f, Z=%f"), CrosshairWorldPosition.X, CrosshairWorldPosition.Y, CrosshairWorldPosition.Z);
 
-    // Get the player controller
-    APlayerController* PlayerController = nullptr;
+    // Ensure projectile moves in the 2D plane by locking Y to match the airship's Y position
+    FVector FireTarget = CrosshairWorldPosition;
+    FireTarget.Y = Airship->GetActorLocation().Y; // Keep projectiles in 2D space
 
-    // Ensure the weapon has an owner (the airship)
-    if (GetOwner())
-    {
-        APawn* OwnerPawn = Cast<APawn>(GetOwner());
-        if (OwnerPawn)
-        {
-            PlayerController = Cast<APlayerController>(OwnerPawn->GetController());
-        }
-    }
+    // Calculate firing direction
+    FVector FireDirection = (FireTarget - MuzzleLocation).GetSafeNormal();
+    
+    UE_LOG(LogTemp, Log, TEXT("Fire direction: X=%f, Y=%f, Z=%f"), FireDirection.X, FireDirection.Y, FireDirection.Z);
 
-    // If still null, try global method as a backup
-    if (!PlayerController)
-    {
-        PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-    }
-
-    if (!PlayerController)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Weapon %s could not get player controller!"), *GetName());
-        return;
-    }
-    if (!PlayerController)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Weapon %s could not get player controller!"), *GetName());
-        return;
-    }
-
-    float MouseX, MouseY;
-    if (!PlayerController->GetMousePosition(MouseX, MouseY))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Weapon %s could not get mouse position!"), *GetName());
-        return;
-    }
-
-    FVector WorldLocation, WorldDirection;
-    if (!PlayerController->DeprojectScreenPositionToWorld(MouseX, MouseY, WorldLocation, WorldDirection))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Weapon %s could not deproject screen position!"), *GetName());
-        return;
-    }
-
-    FVector AirshipWorldLocation = GetOwner()->GetActorLocation();
-    FVector AimTarget = WorldLocation + (WorldDirection * 10000.0f);
-    AimTarget.Y = AirshipWorldLocation.Y; // Lock to 2D plane
-    FVector FireDirection = (AimTarget - MuzzleLocation).GetSafeNormal();
-
-    UE_LOG(LogTemp, Log, TEXT("Fire direction: %s"), *FireDirection.ToString());
-
-    // Spawn projectile
+    // Spawn the projectile
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
     AProjectile* SpawnedProjectile = GetWorld()->SpawnActor<AProjectile>(ProjectileClass, MuzzleLocation, FireDirection.Rotation(), SpawnParams);
     if (!SpawnedProjectile)
     {
-        UE_LOG(LogTemp, Error, TEXT("Weapon %s failed to spawn projectile!"), *GetName());
+        UE_LOG(LogTemp, Error, TEXT("Fire(): Failed to spawn projectile!"));
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("Weapon %s successfully spawned a projectile!"), *GetName());
+    UE_LOG(LogTemp, Log, TEXT("Projectile spawned successfully: %s"), *SpawnedProjectile->GetName());
+    UE_LOG(LogTemp, Log, TEXT("Projectile %s spawned at location: %s"), *SpawnedProjectile->GetName(), *SpawnedProjectile->GetActorLocation().ToString());
 
-    // Initialize projectile
+    //add a function to get the correct muzzle velocity here: *********
+    // Set projectile velocity in the correct direction
     SpawnedProjectile->InitialiseProjectile(MuzzleVelocity, FireDirection.Rotation().Pitch);
-    
+
     // Reduce ammo count
-    CurrentMagazineAmmo--;
+    //CurrentMagazineAmmo--;
 }
 
 

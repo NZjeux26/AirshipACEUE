@@ -19,14 +19,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	//Need a mesh for the weapon
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-	UStaticMeshComponent* WeaponMesh;
+	
 	// Dry mass of the weapon (kg)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
 	float DryMass;
@@ -79,6 +72,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Properties")
 	TSubclassOf<AProjectile> ProjectileClass;
 
+public:
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+	//Need a mesh for the weapon
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	UStaticMeshComponent* WeaponMesh;
+	
 	// Functions for firing and reloading
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void Fire();
