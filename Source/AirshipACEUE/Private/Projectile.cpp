@@ -39,7 +39,7 @@ void AProjectile::BeginPlay()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Log, TEXT("Projectile %s has a valid movement component."), *GetName());
+		//UE_LOG(LogTemp, Log, TEXT("Projectile %s has a valid movement component."), *GetName());
 	}
 }
 
@@ -65,7 +65,7 @@ void AProjectile::InitialiseProjectile(float Velocity, float Angle)
 	ProjectileMovement->bRotationFollowsVelocity = true;
 	ProjectileMovement->bShouldBounce = false;
     
-	UE_LOG(LogTemp, Log, TEXT("Projectile %s launched with velocity: %s"), *GetName(), *LaunchVelocity.ToString());
+	//UE_LOG(LogTemp, Log, TEXT("Projectile %s launched with velocity: %s"), *GetName(), *LaunchVelocity.ToString());
 }
 
 void AProjectile::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,

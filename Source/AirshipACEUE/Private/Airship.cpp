@@ -132,6 +132,7 @@ void AAirship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		EnhancedInputComponent->BindAction(MoveX, ETriggerEvent::Triggered, this, &AAirship::MoveXAxis);
 		EnhancedInputComponent->BindAction(ZeroPower,ETriggerEvent::Triggered, this, &AAirship::ZeroPowerAxis);
 		EnhancedInputComponent->BindAction(FireWeapon,ETriggerEvent::Triggered,this,&AAirship::FireWeapons);
+		EnhancedInputComponent->BindAction(ReloadWeapon,ETriggerEvent::Triggered,this,&AAirship::ReloadWeapons);
 	}
 }
 // Called every frame does all the checking against the atmo and the object
@@ -510,8 +511,23 @@ void AAirship::FireWeapons()
 	{
 		if (Hardpoint && Hardpoint->MountedWeapon) // Ensure Hardpoint and Weapon exist
 		{
-			UE_LOG(LogTemp, Log, TEXT("Firing weapon on hardpoint: %s"), *Hardpoint->MountedWeapon->GetName());
+			//UE_LOG(LogTemp, Log, TEXT("Firing weapon on hardpoint: %s"), *Hardpoint->MountedWeapon->GetName());
 			Hardpoint->MountedWeapon->Fire();
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Null hardpoint or missing weapon!"));
+		}
+	}
+}
+
+void AAirship::ReloadWeapons()
+{
+	for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
+	{
+		if (Hardpoint && Hardpoint->MountedWeapon) // Ensure Hardpoint and Weapon exist
+		{
+			Hardpoint->MountedWeapon->Reload();
 		}
 		else
 		{

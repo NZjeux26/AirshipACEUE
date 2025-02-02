@@ -4,6 +4,7 @@
 #include "Weapon.h"
 
 #include "Airship.h"
+#include "HLSLTree/HLSLTreeTypes.h"
 
 
 // Sets default values
@@ -20,6 +21,66 @@ void AWeapon::BeginPlay()
 	
 }
 
+void AWeapon::ResetFire()
+{
+    // Only allow firing if there's ammo in the magazine
+    if (CurrentMagazineAmmo > 0)
+    {
+        bCanFire = true;
+    }
+    //UE_LOG(LogTemp, Log, TEXT("Weapon is ready to fire again"));
+}
+
+FVector AWeapon::GetMuzzleLocation() const
+{
+    // Get the location of the muzzle socket on the weapon mesh
+    return WeaponMesh ? WeaponMesh->GetSocketLocation(TEXT("Muzzle")) : FVector::ZeroVector;
+}
+
+FVector AWeapon::CalculateFireDirection(const FVector& MuzzleLocation, const FVector& CrosshairWorldPosition,
+    const AAirship* Airship) const
+{
+    // Adjust the target to ensure the projectile stays in the 2D plane by locking the Y-axis
+    FVector FireTarget = CrosshairWorldPosition;
+    // Lock the Y coordinate to the airship’s position to remain in 2D space.
+    FireTarget.Y = Airship->GetActorLocation().Y;
+    return (FireTarget - MuzzleLocation).GetSafeNormal();
+}
+
+AProjectile* AWeapon::SpawnProjectile(const FVector& MuzzleLocation, const FRotator& SpawnRotation)
+{
+    // Define spawn parameters for the projectile, ensuring it spawns even if collisions exist
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+    return GetWorld()->SpawnActor<AProjectile>(ProjectileClass, MuzzleLocation, SpawnRotation, SpawnParams);
+}
+
+void AWeapon::BeginFireCooldown()
+{
+    // Calculate fire cooldown based on rate of fire (converts RPS to seconds per shot)
+    bCanFire = false;
+    float FireCooldown = 1.0f / RateOfFire;
+    GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, this, &AWeapon::ResetFire, FireCooldown, false);
+   // UE_LOG(LogTemp, Log, TEXT("Weapon fired. Next shot in %f seconds"), FireCooldown);
+}
+
+void AWeapon::ConsumeAmmo()
+{
+    //consumes a round from the nagazine, if the magzine is zero, stop firing
+    if (CurrentMagazineAmmo > 0)
+    {
+        CurrentMagazineAmmo--;
+        // If ammo has reached 0 after decrementing, disable firing.
+        if (CurrentMagazineAmmo == 0)
+        {
+            bCanFire = false;
+        }
+    }
+    
+    else bCanFire = false;
+   // UE_LOG(LogTemp, Log, TEXT("MagSize: %d"), CurrentMagazineAmmo);
+}
+
 // Called every frame
 void AWeapon::Tick(float DeltaTime)
 {
@@ -28,74 +89,49 @@ void AWeapon::Tick(float DeltaTime)
 
 void AWeapon::Fire()
 {
-    if (CurrentMagazineAmmo <= 0)
+    if (!bCanFire) // performs all the validation checks
     {
-        UE_LOG(LogTemp, Warning, TEXT("Out of ammo!"));
         return;
     }
-
-    if (!ProjectileClass)
-    {
-        UE_LOG(LogTemp, Error, TEXT("ProjectileClass is NULL!"));
-        return;
-    }
-
-    // Get the airship (assumes the weapon is attached to it)
-    AAirship* Airship = Cast<AAirship>(GetOwner());
-    if (!Airship)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Fire(): Weapon has no valid Airship owner!"));
-        return;
-    }
-
-    // Get the crosshair's global world position (assuming AAirship has a stored FVector for it)
-    FVector CrosshairWorldPosition = Airship->GetCrosshairWorldPosition(); // Ensure this function exists in AAirship
-
-    // Get the weapon's muzzle location
-    if (!WeaponMesh)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Fire(): WeaponMesh is NULL!"));
-        return;
-    }
-
-    FVector MuzzleLocation = WeaponMesh->GetSocketLocation(TEXT("Muzzle"));
-    UE_LOG(LogTemp, Log, TEXT("Muzzle location: X=%f, Y=%f, Z=%f"), MuzzleLocation.X, MuzzleLocation.Y, MuzzleLocation.Z);
-    UE_LOG(LogTemp, Log, TEXT("Crosshair world position: X=%f, Y=%f, Z=%f"), CrosshairWorldPosition.X, CrosshairWorldPosition.Y, CrosshairWorldPosition.Z);
-
-    // Ensure projectile moves in the 2D plane by locking Y to match the airship's Y position
-    FVector FireTarget = CrosshairWorldPosition;
-    FireTarget.Y = Airship->GetActorLocation().Y; // Keep projectiles in 2D space
-
-    // Calculate firing direction
-    FVector FireDirection = (FireTarget - MuzzleLocation).GetSafeNormal();
     
-    UE_LOG(LogTemp, Log, TEXT("Fire direction: X=%f, Y=%f, Z=%f"), FireDirection.X, FireDirection.Y, FireDirection.Z);
+    AAirship* Airship = Cast<AAirship>(GetOwner()); // Already validated in CanFire()
 
-    // Spawn the projectile
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+    FVector MuzzleLocation = GetMuzzleLocation();
+    FVector CrosshairWorldPosition = Airship->GetCrosshairWorldPosition();
+    FVector FireDirection = CalculateFireDirection(MuzzleLocation, CrosshairWorldPosition, Airship);
 
-    AProjectile* SpawnedProjectile = GetWorld()->SpawnActor<AProjectile>(ProjectileClass, MuzzleLocation, FireDirection.Rotation(), SpawnParams);
+    // Spawn the projectile at the muzzle location with the calculated fire direction
+    AProjectile* SpawnedProjectile = SpawnProjectile(MuzzleLocation, FireDirection.Rotation());
     if (!SpawnedProjectile)
     {
         UE_LOG(LogTemp, Error, TEXT("Fire(): Failed to spawn projectile!"));
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("Projectile spawned successfully: %s"), *SpawnedProjectile->GetName());
-    UE_LOG(LogTemp, Log, TEXT("Projectile %s spawned at location: %s"), *SpawnedProjectile->GetName(), *SpawnedProjectile->GetActorLocation().ToString());
-
-    //add a function to get the correct muzzle velocity here: *********
-    // Set projectile velocity in the correct direction
+    // Initialise the projectile
     SpawnedProjectile->InitialiseProjectile(MuzzleVelocity, FireDirection.Rotation().Pitch);
 
     // Reduce ammo count
-    //CurrentMagazineAmmo--;
+    ConsumeAmmo();
+
+    // Start cooldown timer
+    BeginFireCooldown();
 }
+
 
 
 void AWeapon::Reload()
 {
-	CurrentMagazineAmmo = MagazineSize;
+    //this will need changed, I need a value for how much ammo is actually being carried and to subtract from that to fill the mag
+    if (Ammo > MagazineSize )
+    {
+        CurrentMagazineAmmo = MagazineSize;
+        Ammo - MagazineSize;
+    }
+    else
+    {
+        bCanFire = false;
+        UE_LOG(LogTemp, Error, TEXT("Out of Ammo for this Weapon!"));
+    }
 }
 

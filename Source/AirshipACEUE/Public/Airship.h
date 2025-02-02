@@ -129,6 +129,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	UInputAction* FireWeapon;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UInputAction* ReloadWeapon;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	TSubclassOf<UUserWidget> CrosshairWidgetClass;
@@ -167,6 +170,7 @@ protected:
 	void MoveXAxis();
 	void ZeroPowerAxis();
 	void FireWeapons();
+	void ReloadWeapons();
 
 public:
 	// Function to set scale and recalculate dimensions
