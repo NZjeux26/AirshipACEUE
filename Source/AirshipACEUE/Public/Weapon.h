@@ -97,6 +97,11 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UStaticMeshComponent* WeaponMesh;
 
+	UFUNCTION(BlueprintCallable, Category = "Weapon Properties")
+	float GetWeaponsMass() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon Properties")
+	float GetMunitionsMass() const;
 	
 	// Functions for firing and reloading
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
@@ -104,4 +109,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void Reload();
+
+	// Projectile Blueprint class to spawn
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SetProjectileClass(TSubclassOf<AProjectile> NewProjectileClass);
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SetAmmo(int32 AmmoCount);
 };

@@ -9,7 +9,10 @@
 #include "Components/TextBlock.h"
 #include "AirGameInstance.h"
 #include "Airship.h"
+#include "Blueprint/WidgetTree.h"
 #include "Components/EditableTextBox.h"
+#include "Components/HorizontalBox.h"
+#include "Components/VerticalBox.h"
 #include "Kismet/GameplayStatics.h"
 
 void UMainMenuWidget::NativeConstruct()
@@ -31,8 +34,163 @@ void UMainMenuWidget::NativeConstruct()
 		ApplyMassChangesButton->OnClicked.AddDynamic(this, &UMainMenuWidget::OnApplyMassChangesClicked);
 	}
 
+	if (ApplyLoadoutButton)
+	{
+		ApplyLoadoutButton->OnClicked.AddDynamic(this, &UMainMenuWidget::OnApplyLoadoutClicked);
+	}
+
 	PopulateAirshipDropdown();
 }
+
+void UMainMenuWidget::PopulateWeaponSelectionUI()
+{
+	UE_LOG(LogTemp, Log, TEXT("Populating weapon selection UI..."));
+
+	if (!HardpointListPanel)
+    {
+        UE_LOG(LogTemp, Error, TEXT("HardpointListPanel is not bound to the widget."));
+        return;
+    }
+
+    // Clear previous elements
+    HardpointListPanel->ClearChildren();
+    HardpointWeaponDropdowns.Empty();
+    HardpointProjectileDropdowns.Empty();
+    HardpointAmmoInputs.Empty();
+
+    // Get selected airship from GameInstance
+    if (UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this)))
+    {
+        if (GI->SelectedAirship)
+        {
+        	AAirship* TempAirship = GetWorld()->SpawnActor<AAirship>(GI->SelectedAirship, FVector::ZeroVector, FRotator::ZeroRotator);
+        	if (!TempAirship || TempAirship->GetWeaponHardpoints().Num() == 0)
+        	{
+        		UE_LOG(LogTemp, Warning, TEXT("No hardpoints found on the default airship object."));
+				return;
+        	}
+        	
+	        UE_LOG(LogTemp, Log, TEXT("Airship has %d hardpoints."), TempAirship->GetWeaponHardpoints().Num());
+	        
+            for (UWeaponHardpoint* Hardpoint : TempAirship->GetWeaponHardpoints())
+            {
+                UE_LOG(LogTemp, Log, TEXT("Adding UI for hardpoint: %s"), *Hardpoint->GetName());
+                
+                if (!Hardpoint) continue;
+
+                // Create UI elements
+                UHorizontalBox* HardpointRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+                HardpointListPanel->AddChild(HardpointRow);
+
+                // **Create Weapon Dropdown**
+                UComboBoxString* WeaponDropdown = WidgetTree->ConstructWidget<UComboBoxString>();
+                HardpointRow->AddChild(WeaponDropdown);
+                HardpointWeaponDropdowns.Add(Hardpoint, WeaponDropdown);
+
+                // **Use AssetRegistry to Find Weapon Blueprints**
+                FString WeaponsPath = "/Game/Weapons";
+                TArray<FAssetData> WeaponAssets;
+                FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+                AssetRegistry.Get().GetAssetsByPath(FName(*WeaponsPath), WeaponAssets, true);
+
+                for (const FAssetData& Asset : WeaponAssets)
+                {
+                    if (UBlueprint* Blueprint = Cast<UBlueprint>(Asset.GetAsset()))
+                    {
+                        if (Blueprint->GeneratedClass && Blueprint->GeneratedClass->IsChildOf(AWeapon::StaticClass()))
+                        {
+                            WeaponDropdown->AddOption(Asset.AssetName.ToString());
+                        }
+                    }
+                }
+
+                WeaponDropdown->OnSelectionChanged.AddDynamic(this, &UMainMenuWidget::OnWeaponSelected);
+            }
+        	TempAirship->Destroy();//might be the wrong spot
+        }
+        else
+        {
+        	UE_LOG(LogTemp, Error, TEXT("No airship selected in GameInstance!"));
+        }
+    }
+}
+
+void UMainMenuWidget::OnWeaponSelected(FString SelectedWeapon, ESelectInfo::Type SelectionType)
+{
+	// Find the correct hardpoint based on the dropdown
+	UWeaponHardpoint* SelectedHardpoint = nullptr;
+    
+	for (auto& Pair : HardpointWeaponDropdowns)
+	{
+		if (Pair.Value && Pair.Value->GetSelectedOption() == SelectedWeapon)
+		{
+			SelectedHardpoint = Pair.Key;
+			break;
+		}
+	}
+
+	if (!SelectedHardpoint)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not find the matching hardpoint for weapon: %s"), *SelectedWeapon);
+		return;
+	}
+
+	// Load the selected weapon
+	FString Path = "/Game/Weapons/" + SelectedWeapon + "." + SelectedWeapon + "_C";
+	SelectedHardpoint->WeaponToMount = LoadClass<AWeapon>(nullptr, *Path);
+    
+	UE_LOG(LogTemp, Log, TEXT("Weapon %s assigned to hardpoint %s"), *SelectedWeapon, *SelectedHardpoint->GetName());
+
+	// Enable and populate the projectile dropdown for this hardpoint
+	if (UComboBoxString* ProjectileDropdown = HardpointProjectileDropdowns.FindRef(SelectedHardpoint))
+	{
+		ProjectileDropdown->ClearOptions();
+		ProjectileDropdown->SetIsEnabled(true);
+
+		// Get available projectiles
+		FString ProjectilePath = "/Game/Projectiles";
+		TArray<FAssetData> ProjectileAssets;
+		FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+		AssetRegistry.Get().GetAssetsByPath(FName(*ProjectilePath), ProjectileAssets, true);
+
+		for (const FAssetData& ProjectileData : ProjectileAssets)
+		{
+			ProjectileDropdown->AddOption(ProjectileData.AssetName.ToString());
+		}
+	}
+}
+
+void UMainMenuWidget::OnProjectileSelected(FString SelectedProjectile, UWeaponHardpoint* Hardpoint)
+{
+	if (!Hardpoint) return;
+
+	FString Path = "/Game/Projectiles/" + SelectedProjectile + "." + SelectedProjectile + "_C";
+	if (AWeapon* WeaponInstance = Hardpoint->WeaponToMount->GetDefaultObject<AWeapon>())
+	{
+		TSubclassOf<AProjectile> LoadedProjectileClass = LoadClass<AProjectile>(nullptr, *Path);
+		WeaponInstance->SetProjectileClass(LoadedProjectileClass);
+	}
+
+	// Enable ammo input field
+	if (UEditableTextBox* AmmoInput = HardpointAmmoInputs.FindRef(Hardpoint))
+	{
+		AmmoInput->SetIsEnabled(true);
+	}
+}
+
+void UMainMenuWidget::OnAmmoAmountChanged(const FText& AmmoText, UWeaponHardpoint* Hardpoint)
+{
+	if (!Hardpoint) return;
+
+	int32 AmmoAmount = FCString::Atoi(*AmmoText.ToString());
+
+	AWeapon* WeaponInstance = Hardpoint->WeaponToMount->GetDefaultObject<AWeapon>();
+	if (WeaponInstance)
+	{
+		WeaponInstance->SetAmmo(AmmoAmount);
+	}
+}
+
 //When hitting the apply button, get the masses from the user input boxes, check tey are not < 0 and then set them, update total
 void UMainMenuWidget::OnApplyMassChangesClicked()
 {
@@ -162,12 +320,12 @@ void UMainMenuWidget::PopulateAirshipDropdown()
 
     // Define the folder path where airship blueprints are stored
     const FString Path = "/Game/Airships"; // Update with the actual folder path
-    TArray<FAssetData> AssetDataArray;
 
     // Access the Asset Registry to find assets
     if (FModuleManager::Get().IsModuleLoaded("AssetRegistry"))
     {
-        FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	    TArray<FAssetData> AssetDataArray; //If it breaks it was because of this <<<<<<<<
+	    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
         AssetRegistryModule.Get().GetAssetsByPath(FName(*Path), AssetDataArray, true);
 
         // Check if assets were found
@@ -233,6 +391,7 @@ void UMainMenuWidget::OnAirshipSelected(FString SelectedItem, ESelectInfo::Type 
 
 				//Populate mass fields for the selected airship
 				PopulateMassFields();
+				PopulateWeaponSelectionUI();
 			}
 		}
 	}
@@ -281,6 +440,12 @@ void UMainMenuWidget::OnStartButtonClicked()
 
 	// Proceed to load the level
 	UGameplayStatics::OpenLevel(this, FName("testlevel"));
+}
+
+void UMainMenuWidget::OnApplyLoadoutClicked()
+{
+	UE_LOG(LogTemp, Log, TEXT("Weapon loadout applied!"));
+	// Store selections in GameInstance before switching levels
 }
 
 bool UMainMenuWidget::IsValidInput(const FString& Input)

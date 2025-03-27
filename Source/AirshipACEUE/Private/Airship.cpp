@@ -14,8 +14,6 @@
 #include "Weapon.h"
 #include "WeaponHardpoint.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/CanvasPanel.h"
-#include "Components/CanvasPanelSlot.h"
 
 // Sets default values
 AAirship::AAirship()
@@ -73,13 +71,21 @@ AAirship::AAirship()
 	SmoothedPower = FVector::ZeroVector;
 	SmoothedBForce = FVector::ZeroVector;
 	SmoothedDragForce = FVector::ZeroVector;
-}
 
+	//equip the weapons.
+}
+void AAirship::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	EquipEngines();
+	EquipWeapons();
+}
 // Called when the game starts or when spawned
 void AAirship::BeginPlay()
 {
 	Super::BeginPlay();
 	PreviousPosition = GetActorLocation();
+	
 	// Calculate dimensions from the mesh commented out for now until meshes for players setup
 	//UpdateDimensionsFromMesh(); 
 	Volume = BuoyancyData::CalVolume(Length, Diameter); //Automatically calculate the volume based off the other values
@@ -96,10 +102,9 @@ void AAirship::BeginPlay()
 	 }
 	//Set the airship as the default pawn
 	SetDefaultPawn();
-	EquipWeapons();//equip the weapons.
-	EquipEngines();
 	
 	UpdateTotalMass(); //Done Here since Mass for engines isn't check until above
+	
 	//Add the mapping for the controls
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
@@ -112,13 +117,19 @@ void AAirship::BeginPlay()
 		PlayerController->SetInputMode(InputMode);
 		
 		//enable the mouse
+		UE_LOG(LogTemp, Warning, TEXT("Airship spawned in gameplay mode. Hiding mouse cursor."));
 		PlayerController->bShowMouseCursor = false;
 		PlayerController->bEnableClickEvents = false;
 		PlayerController->bEnableMouseOverEvents = false;
 		// Add the crosshair widget
 		SetupCrossHairWidget();
 	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("No PlayerController found! Skipping input setup."));
+	}
 }
+
 //setup for the playinputs, the bind actions for each action is here with the function to be used and the BP function assoication
 void AAirship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -390,11 +401,10 @@ void AAirship::EquipEngines()
 		else UE_LOG(LogTemp, Warning, TEXT("Engine not found"));
 	}
 }
-
+//Finds all the weapons modules, adds them to the array and attaches them to the hardpoints
 void AAirship::EquipWeapons()
 {
 	WeaponHardpoints.Empty(); // Ensure the array is empty before populating
-
 	GetComponents<UWeaponHardpoint>(WeaponHardpoints); // Find all attached hardpoints
 
 	for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
@@ -402,7 +412,14 @@ void AAirship::EquipWeapons()
 		if (Hardpoint)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Found Hardpoint: %s"), *Hardpoint->GetName());
-			Hardpoint->AttachWeapon(); // Attach weapon
+			Hardpoint->AttachWeapon();// Attach weapon
+			//check something is actually spawned first.
+			if (Hardpoint->MountedWeapon)
+			{
+				WeaponMass = WeaponMass + Hardpoint->MountedWeapon->GetWeaponsMass();
+				MunitionsMass = MunitionsMass = Hardpoint->MountedWeapon->GetMunitionsMass();
+			}
+			else UE_LOG(LogTemp, Warning, TEXT("No weapon mounted on hardpoint: %s"), *Hardpoint->GetName());
 		}
 	}
 
@@ -468,12 +485,17 @@ void AAirship::SetWeaponsMass(float NewWeaponsMass)
 
 void AAirship::UpdateTotalMass()
 {
-	TotalMass = DryMass + FuelMass + CargoMass + WeaponMass + BallastMass + 8; //8 is fixed just until enginemass problems sorted
+	TotalMass = DryMass + FuelMass + CargoMass + WeaponMass + BallastMass + 8 + WeaponMass + MunitionsMass; //8 is fixed just until enginemass problems sorted
 }
 
 FVector AAirship::GetCrosshairWorldPosition()
 {
 	return CrosshairWorldPosition;
+}
+
+TArray<UWeaponHardpoint*> AAirship::GetWeaponHardpoints() const
+{
+	return WeaponHardpoints;
 }
 
 void AAirship::MoveZAxis()

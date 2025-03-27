@@ -30,6 +30,8 @@ void UWeaponHardpoint::BeginPlay()
 
 void UWeaponHardpoint::AttachWeapon()
 {
+	MountedWeapon = nullptr;
+	
 	if (WeaponToMount && GetWorld())
 	{
 		// Spawn the weapon actor

@@ -14,7 +14,7 @@ class AIRSHIPACEUE_API UMainMenuWidget : public UUserWidget
 protected:
 	virtual void NativeConstruct() override;
 
-	public:
+public:
 	//Assignable Start button to start the game level
 	UPROPERTY(meta = (BindWidget))
 	class UButton* StartButton;
@@ -49,6 +49,41 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	class UButton* ApplyMassChangesButton;
 
+	// Panel that holds all dynamically created weapon selection UI elements
+	UPROPERTY(meta = (BindWidget))
+	class UVerticalBox* HardpointListPanel;
+
+	UPROPERTY(meta = (BindWidget))
+	class UButton* ApplyLoadoutButton;
+	
+	// Mapping: Hardpoint -> Weapon Dropdown
+	UPROPERTY(BlueprintReadWrite, Category = "Weapon Selection")
+	TMap<UWeaponHardpoint*, class UComboBoxString*> HardpointWeaponDropdowns;
+
+	// Mapping: Weapon -> Projectile Dropdown
+	UPROPERTY(BlueprintReadWrite, Category = "Weapon Selection")
+	TMap<UWeaponHardpoint*, class UComboBoxString*> HardpointProjectileDropdowns;
+
+	// Mapping: Weapon -> Ammo Input Field
+	UPROPERTY(BlueprintReadWrite, Category = "Weapon Selection")
+	TMap<UWeaponHardpoint*, class UEditableTextBox*> HardpointAmmoInputs;
+
+	// Populate weapon selection UI dynamically
+	UFUNCTION(BlueprintCallable)
+	void PopulateWeaponSelectionUI();
+
+	// Handle weapon selection change
+	UFUNCTION()
+	void OnWeaponSelected(FString SelectedWeapon, ESelectInfo::Type SelectionType);
+
+	// Handle projectile selection change
+	UFUNCTION()
+	void OnProjectileSelected(FString SelectedProjectile, UWeaponHardpoint* Hardpoint);
+
+	// Handle ammo input change
+	UFUNCTION()
+	void OnAmmoAmountChanged(const FText& AmmoText, UWeaponHardpoint* Hardpoint);
+
 	// Function to handle Apply button click
 	UFUNCTION()
 	void OnApplyMassChangesClicked();
@@ -66,6 +101,9 @@ protected:
 	// Function to handle Start Button click
 	UFUNCTION()
 	void OnStartButtonClicked();
+
+	UFUNCTION()
+	void OnApplyLoadoutClicked();
 
 	UFUNCTION()
 	bool IsValidInput(const FString& Input);

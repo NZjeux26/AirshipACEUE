@@ -87,6 +87,16 @@ void AWeapon::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
+float AWeapon::GetWeaponsMass() const
+{
+    return DryMass;
+}
+
+float AWeapon::GetMunitionsMass() const
+{
+    return CartridgeMass * Ammo;
+}
+
 void AWeapon::Fire()
 {
     if (!bCanFire) // performs all the validation checks
@@ -127,11 +137,23 @@ void AWeapon::Reload()
     {
         CurrentMagazineAmmo = MagazineSize;
         Ammo - MagazineSize;
+       // UE_LOG(LogTemp, Error, TEXT("Reloading! Mag Size now: %d"), CurrentMagazineAmmo);
+        bCanFire = true;
     }
     else
     {
         bCanFire = false;
-        UE_LOG(LogTemp, Error, TEXT("Out of Ammo for this Weapon!"));
+        //UE_LOG(LogTemp, Warning, TEXT("Out of Ammo for this Weapon!"));
     }
+}
+
+void AWeapon::SetProjectileClass(TSubclassOf<AProjectile> NewProjectileClass)
+{
+    ProjectileClass = NewProjectileClass;
+}
+
+void AWeapon::SetAmmo(int32 AmmoCount)
+{
+    Ammo = AmmoCount;
 }
 

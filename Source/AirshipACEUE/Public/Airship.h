@@ -25,6 +25,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void PostInitializeComponents() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 	// Static mesh component representing the airship
@@ -64,6 +65,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
 	float WeaponMass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
+	float MunitionsMass;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Airship Properties")
 	float TotalMass;
 
@@ -94,10 +98,6 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Engines")
 	FVector Throttle;
-
-	// Declare pointers for hardpoints ** This could be deleted
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hardpoints")
-	UWeaponHardpoint* Hardpoint1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hardpoints")
 	TArray<UWeaponHardpoint*> WeaponHardpoints;
@@ -229,4 +229,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Crosshair")
 	FVector GetCrosshairWorldPosition();
+	
+	UFUNCTION(BlueprintCallable, Category = "Weapons")
+	TArray<UWeaponHardpoint*> GetWeaponHardpoints() const;
+
 };
