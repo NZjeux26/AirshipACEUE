@@ -46,74 +46,82 @@ void UMainMenuWidget::PopulateWeaponSelectionUI()
 {
 	UE_LOG(LogTemp, Log, TEXT("Populating weapon selection UI..."));
 
+	// Ensure the panel is properly set up
 	if (!HardpointListPanel)
-    {
-        UE_LOG(LogTemp, Error, TEXT("HardpointListPanel is not bound to the widget."));
-        return;
-    }
+	{
+		UE_LOG(LogTemp, Error, TEXT("HardpointListPanel is not bound to the widget."));
+		return;
+	}
 
-    // Clear previous elements
-    HardpointListPanel->ClearChildren();
-    HardpointWeaponDropdowns.Empty();
-    HardpointProjectileDropdowns.Empty();
-    HardpointAmmoInputs.Empty();
+	// Clear previous UI elements
+	HardpointListPanel->ClearChildren();
+	HardpointWeaponDropdowns.Empty();
+	HardpointProjectileDropdowns.Empty();
+	HardpointAmmoInputs.Empty();
 
-    // Get selected airship from GameInstance
-    if (UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this)))
-    {
-        if (GI->SelectedAirship)
-        {
-        	AAirship* TempAirship = GetWorld()->SpawnActor<AAirship>(GI->SelectedAirship, FVector::ZeroVector, FRotator::ZeroRotator);
-        	if (!TempAirship || TempAirship->GetWeaponHardpoints().Num() == 0)
-        	{
-        		UE_LOG(LogTemp, Warning, TEXT("No hardpoints found on the default airship object."));
-				return;
-        	}
-        	
-	        UE_LOG(LogTemp, Log, TEXT("Airship has %d hardpoints."), TempAirship->GetWeaponHardpoints().Num());
-	        
-            for (UWeaponHardpoint* Hardpoint : TempAirship->GetWeaponHardpoints())
-            {
-                UE_LOG(LogTemp, Log, TEXT("Adding UI for hardpoint: %s"), *Hardpoint->GetName());
-                
-                if (!Hardpoint) continue;
+	// Get the selected airship from GameInstance
+	if (UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this)))
+	{
+		// Ensure hardpoints have been initialized
+		if (GI->AirshipLoadout.Num() == 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("No hardpoints found in GameInstance. Initializing..."));
+			GI->InitializeHardpointsFromAirship();
+		}
 
-                // Create UI elements
-                UHorizontalBox* HardpointRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-                HardpointListPanel->AddChild(HardpointRow);
+		UE_LOG(LogTemp, Log, TEXT("Populating UI for %d hardpoints."), GI->AirshipLoadout.Num());
 
-                // **Create Weapon Dropdown**
-                UComboBoxString* WeaponDropdown = WidgetTree->ConstructWidget<UComboBoxString>();
-                HardpointRow->AddChild(WeaponDropdown);
-                HardpointWeaponDropdowns.Add(Hardpoint, WeaponDropdown);
+		// Iterate through the available hardpoints
+		for (FHardpointLoadout& Loadout : GI->AirshipLoadout)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Adding UI for hardpoint: %s"), *Loadout.HardpointName);
 
-                // **Use AssetRegistry to Find Weapon Blueprints**
-                FString WeaponsPath = "/Game/Weapons";
-                TArray<FAssetData> WeaponAssets;
-                FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-                AssetRegistry.Get().GetAssetsByPath(FName(*WeaponsPath), WeaponAssets, true);
+			// Ensure the hardpoint reference is valid
+			if (!Loadout.Hardpoint)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Loadout has no valid Hardpoint! Check if InitializeHardpointsFromAirship() was called."));
+				continue;
+			}
 
-                for (const FAssetData& Asset : WeaponAssets)
-                {
-                    if (UBlueprint* Blueprint = Cast<UBlueprint>(Asset.GetAsset()))
-                    {
-                        if (Blueprint->GeneratedClass && Blueprint->GeneratedClass->IsChildOf(AWeapon::StaticClass()))
-                        {
-                            WeaponDropdown->AddOption(Asset.AssetName.ToString());
-                        }
-                    }
-                }
+			// Create UI row
+			UHorizontalBox* HardpointRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+			HardpointListPanel->AddChild(HardpointRow);
 
-                WeaponDropdown->OnSelectionChanged.AddDynamic(this, &UMainMenuWidget::OnWeaponSelected);
-            }
-        	TempAirship->Destroy();//might be the wrong spot
-        }
-        else
-        {
-        	UE_LOG(LogTemp, Error, TEXT("No airship selected in GameInstance!"));
-        }
-    }
+			// **Weapon Dropdown**
+			UComboBoxString* WeaponDropdown = WidgetTree->ConstructWidget<UComboBoxString>();
+			HardpointRow->AddChild(WeaponDropdown);
+
+			// Add weapon options dynamically using AssetRegistry
+			FString WeaponsPath = "/Game/Weapons";
+			TArray<FAssetData> WeaponAssets;
+			FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+			AssetRegistry.Get().GetAssetsByPath(FName(*WeaponsPath), WeaponAssets, true);
+
+			for (const FAssetData& Asset : WeaponAssets)
+			{
+				// Ensure it's a valid weapon blueprint
+				if (UBlueprint* Blueprint = Cast<UBlueprint>(Asset.GetAsset()))
+				{
+					if (Blueprint->GeneratedClass && Blueprint->GeneratedClass->IsChildOf(AWeapon::StaticClass()))
+					{
+						WeaponDropdown->AddOption(Asset.AssetName.ToString());
+					}
+				}
+			}
+
+			// Bind selection event
+			WeaponDropdown->OnSelectionChanged.AddDynamic(this, &UMainMenuWidget::OnWeaponSelected);
+
+			// Store reference for later use
+			HardpointWeaponDropdowns.Add(Loadout.Hardpoint, WeaponDropdown);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to retrieve GameInstance."));
+	}
 }
+
 
 void UMainMenuWidget::OnWeaponSelected(FString SelectedWeapon, ESelectInfo::Type SelectionType)
 {
@@ -389,6 +397,9 @@ void UMainMenuWidget::OnAirshipSelected(FString SelectedItem, ESelectInfo::Type 
 				GI->SelectedAirship = AirshipClass;
 				UE_LOG(LogTemp, Log, TEXT("Selected Airship stored in GameInstance: %s"), *SelectedItem);
 
+				// Initialize hardpoint loadout
+				GI->InitializeHardpointsFromAirship();
+				
 				//Populate mass fields for the selected airship
 				PopulateMassFields();
 				PopulateWeaponSelectionUI();

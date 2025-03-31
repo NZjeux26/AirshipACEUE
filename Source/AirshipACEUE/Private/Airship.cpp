@@ -1,5 +1,6 @@
 #include "Airship.h"
 
+#include "AirGameInstance.h"
 #include "AirshipController.h"
 #include "GameFramework/PlayerController.h"
 #include "physicsConstants.h"
@@ -12,8 +13,10 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Weapon.h"
+#include "Components/ActorComponent.h"
 #include "WeaponHardpoint.h"
 #include "Blueprint/UserWidget.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AAirship::AAirship()
@@ -78,6 +81,7 @@ void AAirship::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	EquipEngines();
+	WeaponHardpoints = GetWeaponHardpoints();
 	EquipWeapons();
 }
 // Called when the game starts or when spawned
@@ -118,9 +122,9 @@ void AAirship::BeginPlay()
 		
 		//enable the mouse
 		UE_LOG(LogTemp, Warning, TEXT("Airship spawned in gameplay mode. Hiding mouse cursor."));
-		PlayerController->bShowMouseCursor = false;
-		PlayerController->bEnableClickEvents = false;
-		PlayerController->bEnableMouseOverEvents = false;
+		// PlayerController->bShowMouseCursor = false;
+		// PlayerController->bEnableClickEvents = false;
+		// PlayerController->bEnableMouseOverEvents = false;
 		// Add the crosshair widget
 		SetupCrossHairWidget();
 	}
@@ -128,6 +132,7 @@ void AAirship::BeginPlay()
 	{
 		UE_LOG(LogTemp, Error, TEXT("No PlayerController found! Skipping input setup."));
 	}
+	
 }
 
 //setup for the playinputs, the bind actions for each action is here with the function to be used and the BP function assoication
@@ -404,26 +409,56 @@ void AAirship::EquipEngines()
 //Finds all the weapons modules, adds them to the array and attaches them to the hardpoints
 void AAirship::EquipWeapons()
 {
-	WeaponHardpoints.Empty(); // Ensure the array is empty before populating
-	GetComponents<UWeaponHardpoint>(WeaponHardpoints); // Find all attached hardpoints
+	// Ensure we have hardpoints
+	if (WeaponHardpoints.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No weapon hardpoints found on %s!"), *GetName());
+		return;
+	}
 
-	for (UWeaponHardpoint* Hardpoint : WeaponHardpoints)
+	// Get the GameInstance and check if there's a stored loadout
+	if (UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this)))
+	{
+		if (GI->SelectedAirship == GetClass() && GI->AirshipLoadout.Num() > 0)
+		{
+			for (int32 i = 0; i < WeaponHardpoints.Num(); i++)
+			{
+				if (!WeaponHardpoints[i] || !GI->AirshipLoadout.IsValidIndex(i)) continue;
+
+				// Equip the selected weapon
+				WeaponHardpoints[i]->EquipWeapon(GI->AirshipLoadout[i].SelectedWeapon);
+
+				UE_LOG(LogTemp, Log, TEXT("Equipped %s on %s"), 
+					*GI->AirshipLoadout[i].SelectedWeapon->GetName(), 
+					*WeaponHardpoints[i]->GetName());
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No GameInstance found or no selected airship!"));
+	}
+}
+
+TArray<UWeaponHardpoint*> AAirship::GetWeaponHardpoints() const
+{
+	TArray<UWeaponHardpoint*> FoundHardpoints;
+
+	// Get all components of type UWeaponHardpoint
+	GetComponents<UWeaponHardpoint>(FoundHardpoints);
+
+	// Log found hardpoints
+	UE_LOG(LogTemp, Log, TEXT("%s found %d weapon hardpoints."), *GetName(), FoundHardpoints.Num());
+
+	for (UWeaponHardpoint* Hardpoint : FoundHardpoints)
 	{
 		if (Hardpoint)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Found Hardpoint: %s"), *Hardpoint->GetName());
-			Hardpoint->AttachWeapon();// Attach weapon
-			//check something is actually spawned first.
-			if (Hardpoint->MountedWeapon)
-			{
-				WeaponMass = WeaponMass + Hardpoint->MountedWeapon->GetWeaponsMass();
-				MunitionsMass = MunitionsMass = Hardpoint->MountedWeapon->GetMunitionsMass();
-			}
-			else UE_LOG(LogTemp, Warning, TEXT("No weapon mounted on hardpoint: %s"), *Hardpoint->GetName());
+			UE_LOG(LogTemp, Log, TEXT("Hardpoint Found: %s"), *Hardpoint->GetName());
 		}
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("%d Hardpoints Found!"), WeaponHardpoints.Num());
+	return FoundHardpoints;
 }
 
 //return (density / 2) * self.yval**2 * self.cd * self.lateral_area
@@ -493,10 +528,10 @@ FVector AAirship::GetCrosshairWorldPosition()
 	return CrosshairWorldPosition;
 }
 
-TArray<UWeaponHardpoint*> AAirship::GetWeaponHardpoints() const
-{
-	return WeaponHardpoints;
-}
+// TArray<UWeaponHardpoint*> AAirship::GetWeaponHardpoints() const
+// {
+// 	return WeaponHardpoints;
+// }
 
 void AAirship::MoveZAxis()
 {

@@ -32,4 +32,12 @@ public:
 	// Function to attach the weapon
 	UFUNCTION(BlueprintCallable, Category = "Hardpoint")
 	void AttachWeapon();
+
+	// **Function to equip a weapon (spawns and attaches it)**
+	UFUNCTION(BlueprintCallable, Category = "Hardpoint")
+	void EquipWeapon(TSubclassOf<AWeapon> NewWeapon);
+
+	// **Function to get the currently mounted weapon**
+	UFUNCTION(BlueprintCallable, Category = "Hardpoint")
+	AWeapon* GetMountedWeapon() const { return MountedWeapon; }
 };

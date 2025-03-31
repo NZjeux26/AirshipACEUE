@@ -3,7 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
-#include "WeaponLoadout.h" 
+#include "HardpointLoadout.h" 
 #include "AirGameInstance.generated.h"
 
 
@@ -14,7 +14,7 @@ class AIRSHIPACEUE_API UAirGameInstance : public UGameInstance
 public:
 	// Stores the selected airship blueprint class
 	UPROPERTY(BlueprintReadWrite, Category = "Airship")
-	TSubclassOf<class APawn> SelectedAirship;
+	TSubclassOf<class AAirship> SelectedAirship;
 	// vars for storing the values selected by the user in the UI
 	UPROPERTY(BlueprintReadWrite, Category = "Airship Properties")
 	float FuelMass;
@@ -29,6 +29,9 @@ public:
 	float WeaponMass;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Loadout")
-	TArray<FWeaponLoadout> WeaponLoadout; // Array of loadouts, one for each hardpoint
+	TArray<FHardpointLoadout> AirshipLoadout; // Array of loadouts, one for each hardpoint
+
+	// Function to initialize hardpoint data from selected airship
+	void InitializeHardpointsFromAirship();
 	
 };

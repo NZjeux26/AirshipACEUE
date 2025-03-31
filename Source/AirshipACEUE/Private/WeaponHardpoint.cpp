@@ -27,7 +27,6 @@ void UWeaponHardpoint::BeginPlay()
 	
 }
 
-
 void UWeaponHardpoint::AttachWeapon()
 {
 	MountedWeapon = nullptr;
@@ -44,7 +43,7 @@ void UWeaponHardpoint::AttachWeapon()
 			// Update weapon's location and rotation to match the hardpoint
 			SpawnedWeapon->SetActorLocationAndRotation(GetComponentLocation(), GetComponentRotation());
 
-			// 🔥 Set the weapon's owner to the airship that owns this hardpoint
+			// Set the weapon's owner to the airship that owns this hardpoint
 			AAirship* OwningAirship = Cast<AAirship>(GetOwner());
 			if (OwningAirship)
 			{
@@ -72,6 +71,40 @@ void UWeaponHardpoint::AttachWeapon()
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("WeaponToMount not set for hardpoint %s"), *GetName());
+	}
+}
+
+void UWeaponHardpoint::EquipWeapon(TSubclassOf<AWeapon> NewWeapon)
+{
+	if (!NewWeapon)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EquipWeapon: Invalid weapon class for hardpoint %s!"), *GetName());
+		return;
+	}
+
+	// If a weapon is already mounted, destroy it
+	if (MountedWeapon)
+	{
+		MountedWeapon->Destroy();
+		MountedWeapon = nullptr;
+	}
+
+	// Spawn the new weapon
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = GetOwner();
+	SpawnParams.Instigator = Cast<APawn>(GetOwner());
+
+	MountedWeapon = GetWorld()->SpawnActor<AWeapon>(NewWeapon, GetComponentTransform(), SpawnParams);
+
+	if (MountedWeapon)
+	{
+		// Attach the weapon to the hardpoint
+		MountedWeapon->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		UE_LOG(LogTemp, Log, TEXT("Weapon %s mounted on hardpoint %s"), *MountedWeapon->GetName(), *GetName());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to spawn weapon on hardpoint %s"), *GetName());
 	}
 }
 

@@ -18,7 +18,7 @@ class AIRSHIPACEUE_API AAirship : public APawn
 public:
 	// Sets default values for this actor's properties
 	AAirship();
-
+	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	
@@ -82,7 +82,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
 	FVector Position;
-	
 	// Attribute to define how many hardpoints the airship can have
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Airship Properties")
 	int NumHardpoints;
@@ -98,9 +97,6 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Engines")
 	FVector Throttle;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hardpoints")
-	TArray<UWeaponHardpoint*> WeaponHardpoints;
 
 	UFUNCTION(BlueprintCallable, Category = "Weapons")
 	void AimWeaponsAtMouse(float DeltaTime, UWeaponHardpoint* Hardpoint);
@@ -233,4 +229,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapons")
 	TArray<UWeaponHardpoint*> GetWeaponHardpoints() const;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Hardpoints")
+	TArray<UWeaponHardpoint*> WeaponHardpoints;
 };
