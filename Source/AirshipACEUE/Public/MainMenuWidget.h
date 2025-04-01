@@ -54,15 +54,11 @@ public:
 	class UVerticalBox* HardpointListPanel;
 
 	UPROPERTY(meta = (BindWidget))
-	class UButton* ApplyLoadoutButton;
-	
-	// Mapping: Hardpoint -> Weapon Dropdown
-	UPROPERTY(BlueprintReadWrite, Category = "Weapon Selection")
-	TMap<UWeaponHardpoint*, class UComboBoxString*> HardpointWeaponDropdowns;
+	class UButton* ApplyLoadoutButton;	
 
-	// Mapping: Weapon -> Projectile Dropdown
-	UPROPERTY(BlueprintReadWrite, Category = "Weapon Selection")
-	TMap<UWeaponHardpoint*, class UComboBoxString*> HardpointProjectileDropdowns;
+	TMap<FString, UComboBoxString*> HardpointWeaponDropdowns; // HardpointName → Dropdown
+
+	TMap<FString, UComboBoxString*> HardpointProjectileDropdowns;
 
 	// Mapping: Weapon -> Ammo Input Field
 	UPROPERTY(BlueprintReadWrite, Category = "Weapon Selection")

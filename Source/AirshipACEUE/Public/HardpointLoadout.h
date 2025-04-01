@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WeaponHardpoint.h"
 #include "HardpointLoadout.generated.h"
 
 // Struct to store information about each weapon loadout
@@ -12,13 +13,17 @@ struct FHardpointLoadout
 	// Hardpoint Name
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString HardpointName;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Hardpoint")  
+	FString WeaponName;
 	
 	UPROPERTY(BlueprintReadWrite, Category = "Loadout")
-	class UWeaponHardpoint* Hardpoint;
+	UWeaponHardpoint* Hardpoint;
 
 	//selected weapon
 	UPROPERTY(BlueprintReadWrite, Category = "Loadout")
 	TSubclassOf<class AWeapon> SelectedWeapon;
+
 	//selected Projectile
 	UPROPERTY(BlueprintReadWrite, Category = "Loadout")
 	TSubclassOf<class AProjectile> SelectedProjectile;

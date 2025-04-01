@@ -86,11 +86,11 @@ void UMainMenuWidget::PopulateWeaponSelectionUI()
 			// Create UI row
 			UHorizontalBox* HardpointRow = WidgetTree->ConstructWidget<UHorizontalBox>();
 			HardpointListPanel->AddChild(HardpointRow);
-
+			
 			// **Weapon Dropdown**
 			UComboBoxString* WeaponDropdown = WidgetTree->ConstructWidget<UComboBoxString>();
 			HardpointRow->AddChild(WeaponDropdown);
-
+			
 			// Add weapon options dynamically using AssetRegistry
 			FString WeaponsPath = "/Game/Weapons";
 			TArray<FAssetData> WeaponAssets;
@@ -111,9 +111,10 @@ void UMainMenuWidget::PopulateWeaponSelectionUI()
 
 			// Bind selection event
 			WeaponDropdown->OnSelectionChanged.AddDynamic(this, &UMainMenuWidget::OnWeaponSelected);
-
+			
 			// Store reference for later use
-			HardpointWeaponDropdowns.Add(Loadout.Hardpoint, WeaponDropdown);
+			//HardpointWeaponDropdowns.Add(Loadout.Hardpoint, WeaponDropdown);
+			HardpointWeaponDropdowns.Add(Loadout.HardpointName, WeaponDropdown);
 		}
 	}
 	else
@@ -122,40 +123,41 @@ void UMainMenuWidget::PopulateWeaponSelectionUI()
 	}
 }
 
-
 void UMainMenuWidget::OnWeaponSelected(FString SelectedWeapon, ESelectInfo::Type SelectionType)
 {
-	// Find the correct hardpoint based on the dropdown
-	UWeaponHardpoint* SelectedHardpoint = nullptr;
-    
-	for (auto& Pair : HardpointWeaponDropdowns)
+	if (SelectionType == ESelectInfo::Type::Direct) return; // Ignore automatic selections
+
+	UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this));
+	if (!GI)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GameInstance not found!"));
+		return;
+	}
+
+	// Find the hardpoint name associated with the dropdown that fired this event
+	FString HardpointName;
+	for (const auto& Pair : HardpointWeaponDropdowns)
 	{
 		if (Pair.Value && Pair.Value->GetSelectedOption() == SelectedWeapon)
 		{
-			SelectedHardpoint = Pair.Key;
+			HardpointName = Pair.Key;
 			break;
 		}
 	}
 
-	if (!SelectedHardpoint)
+	if (HardpointName.IsEmpty())
 	{
 		UE_LOG(LogTemp, Error, TEXT("Could not find the matching hardpoint for weapon: %s"), *SelectedWeapon);
 		return;
 	}
 
-	// Load the selected weapon
-	FString Path = "/Game/Weapons/" + SelectedWeapon + "." + SelectedWeapon + "_C";
-	SelectedHardpoint->WeaponToMount = LoadClass<AWeapon>(nullptr, *Path);
-    
-	UE_LOG(LogTemp, Log, TEXT("Weapon %s assigned to hardpoint %s"), *SelectedWeapon, *SelectedHardpoint->GetName());
-
-	// Enable and populate the projectile dropdown for this hardpoint
-	if (UComboBoxString* ProjectileDropdown = HardpointProjectileDropdowns.FindRef(SelectedHardpoint))
+	// Enable & Populate the projectile dropdown for this hardpoint
+	if (UComboBoxString* ProjectileDropdown = HardpointProjectileDropdowns.FindRef(HardpointName))
 	{
 		ProjectileDropdown->ClearOptions();
 		ProjectileDropdown->SetIsEnabled(true);
 
-		// Get available projectiles
+		// Fetch available projectiles for this weapon
 		FString ProjectilePath = "/Game/Projectiles";
 		TArray<FAssetData> ProjectileAssets;
 		FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -167,6 +169,67 @@ void UMainMenuWidget::OnWeaponSelected(FString SelectedWeapon, ESelectInfo::Type
 		}
 	}
 }
+
+// void UMainMenuWidget::OnWeaponSelected(FString SelectedWeapon, ESelectInfo::Type SelectionType)
+// {
+// 	if (SelectionType == ESelectInfo::Type::Direct) return; // Ignore automatic selections
+//
+//     UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this));
+//     if (!GI)
+//     {
+//         UE_LOG(LogTemp, Error, TEXT("GameInstance not found!"));
+//         return;
+//     }
+//
+//     // Find the hardpoint name associated with the dropdown that fired this event
+//     FString HardpointName;
+//     for (const auto& Pair : HardpointWeaponDropdowns)
+//     {
+//         if (Pair.Value && Pair.Value->GetSelectedOption() == SelectedWeapon)
+//         {
+//             HardpointName = Pair.Key;
+//             break;
+//         }
+//     }
+//
+//     if (HardpointName.IsEmpty())
+//     {
+//         UE_LOG(LogTemp, Error, TEXT("Could not find the matching hardpoint for weapon: %s"), *SelectedWeapon);
+//         return;
+//     }
+//
+//     // Find the correct Hardpoint Loadout in GameInstance
+//     for (FHardpointLoadout& Loadout : GI->AirshipLoadout)
+//     {
+//         if (Loadout.HardpointName == HardpointName)
+//         {
+//             // Load the weapon class dynamically
+//             FString Path = "/Game/Weapons/" + SelectedWeapon + "." + SelectedWeapon + "_C";
+//             Loadout.SelectedWeapon = LoadClass<AWeapon>(nullptr, *Path);
+//
+//             UE_LOG(LogTemp, Log, TEXT("Weapon %s assigned to hardpoint %s"), *SelectedWeapon, *HardpointName);
+//             break;
+//         }
+//     }
+//
+//     // Enable & Populate the projectile dropdown for this hardpoint
+//     if (UComboBoxString* ProjectileDropdown = HardpointProjectileDropdowns.FindRef(HardpointName))
+//     {
+//         ProjectileDropdown->ClearOptions();
+//         ProjectileDropdown->SetIsEnabled(true);
+//
+//         // Fetch available projectiles
+//         FString ProjectilePath = "/Game/Projectiles";
+//         TArray<FAssetData> ProjectileAssets;
+//         FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+//         AssetRegistry.Get().GetAssetsByPath(FName(*ProjectilePath), ProjectileAssets, true);
+//
+//         for (const FAssetData& ProjectileData : ProjectileAssets)
+//         {
+//             ProjectileDropdown->AddOption(ProjectileData.AssetName.ToString());
+//         }
+//     }
+// }
 
 void UMainMenuWidget::OnProjectileSelected(FString SelectedProjectile, UWeaponHardpoint* Hardpoint)
 {
@@ -455,8 +518,72 @@ void UMainMenuWidget::OnStartButtonClicked()
 
 void UMainMenuWidget::OnApplyLoadoutClicked()
 {
-	UE_LOG(LogTemp, Log, TEXT("Weapon loadout applied!"));
-	// Store selections in GameInstance before switching levels
+	 UE_LOG(LogTemp, Log, TEXT("Applying weapon loadout..."));
+
+    // Get GameInstance
+    UAirGameInstance* GI = Cast<UAirGameInstance>(UGameplayStatics::GetGameInstance(this));
+    if (!GI)
+    {
+       UE_LOG(LogTemp, Error, TEXT("GameInstance not found!"));
+       return;
+    }
+
+    // Check if there are hardpoints available
+    if (GI->AirshipLoadout.Num() == 0)
+    {
+       UE_LOG(LogTemp, Warning, TEXT("No hardpoints found in GameInstance!"));
+       return;
+    }
+
+    // Update all hardpoints with their selected weapons and projectiles
+    for (FHardpointLoadout& Loadout : GI->AirshipLoadout)
+    {
+        FString HardpointName = Loadout.HardpointName;
+        
+        // Get the weapon dropdown for this hardpoint
+        UComboBoxString* WeaponDropdown = HardpointWeaponDropdowns.FindRef(HardpointName);
+        if (!WeaponDropdown)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Weapon dropdown not found for hardpoint %s"), *HardpointName);
+            continue;
+        }
+        
+        // Get the selected weapon name
+        FString SelectedWeapon = WeaponDropdown->GetSelectedOption();
+        if (SelectedWeapon.IsEmpty())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("No weapon selected for hardpoint %s"), *HardpointName);
+            continue;
+        }
+        
+        // Get the projectile dropdown for this hardpoint
+        UComboBoxString* ProjectileDropdown = HardpointProjectileDropdowns.FindRef(HardpointName);
+        FString SelectedProjectile;
+        
+        if (ProjectileDropdown)
+        {
+            SelectedProjectile = ProjectileDropdown->GetSelectedOption();
+        }
+        
+        // Update loadout with selected weapon
+        Loadout.WeaponName = SelectedWeapon;
+        
+        // Load the weapon class
+        FString WeaponPath = "/Game/Weapons/" + SelectedWeapon + "." + SelectedWeapon + "_C";
+        Loadout.SelectedWeapon = LoadClass<AWeapon>(nullptr, *WeaponPath);
+        
+        // Load the projectile class if selected
+        if (!SelectedProjectile.IsEmpty())
+        {
+            FString ProjectilePath = "/Game/Projectiles/" + SelectedProjectile + "." + SelectedProjectile + "_C";
+            Loadout.SelectedProjectile = LoadClass<AProjectile>(nullptr, *ProjectilePath);
+            UE_LOG(LogTemp, Log, TEXT("Projectile %s assigned to hardpoint %s"), *SelectedProjectile, *HardpointName);
+        }
+        
+        UE_LOG(LogTemp, Log, TEXT("Weapon %s assigned to hardpoint %s"), *SelectedWeapon, *HardpointName);
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("Weapon loadout successfully applied."));
 }
 
 bool UMainMenuWidget::IsValidInput(const FString& Input)
