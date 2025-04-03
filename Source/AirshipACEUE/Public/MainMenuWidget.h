@@ -49,16 +49,17 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	class UButton* ApplyMassChangesButton;
 
-	// Panel that holds all dynamically created weapon selection UI elements
+	// Panel that holds all dynamically created weapon and Projectile selection UI elements
 	UPROPERTY(meta = (BindWidget))
 	class UVerticalBox* HardpointListPanel;
 
 	UPROPERTY(meta = (BindWidget))
 	class UButton* ApplyLoadoutButton;	
 
-	TMap<FString, UComboBoxString*> HardpointWeaponDropdowns; // HardpointName → Dropdown
-
-	TMap<FString, UComboBoxString*> HardpointProjectileDropdowns;
+	TMap<FString, UComboBoxString*> HardpointWeaponDropdowns; // A map of dropdowns for the dropdown and the hardpoint's name (eg hardpoint1)
+	TMap<FString, UVerticalBox*> HardpointContainers;
+	
+	TMap<FString, UComboBoxString*> HardpointProjectileDropdowns; //same but for the projectiles
 
 	// Mapping: Weapon -> Ammo Input Field
 	UPROPERTY(BlueprintReadWrite, Category = "Weapon Selection")
@@ -68,13 +69,16 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void PopulateWeaponSelectionUI();
 
+	UFUNCTION(BlueprintCallable)
+	void PopulateProjSelectionUI(const FString& HardpointName);
+	
 	// Handle weapon selection change
 	UFUNCTION()
 	void OnWeaponSelected(FString SelectedWeapon, ESelectInfo::Type SelectionType);
 
 	// Handle projectile selection change
 	UFUNCTION()
-	void OnProjectileSelected(FString SelectedProjectile, UWeaponHardpoint* Hardpoint);
+	void OnProjectileSelected(FString SelectedProjectile, ESelectInfo::Type SelectionType);
 
 	// Handle ammo input change
 	UFUNCTION()
