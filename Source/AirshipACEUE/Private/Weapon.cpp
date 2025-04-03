@@ -128,8 +128,6 @@ void AWeapon::Fire()
     BeginFireCooldown();
 }
 
-
-
 void AWeapon::Reload()
 {
     //this will need changed, I need a value for how much ammo is actually being carried and to subtract from that to fill the mag

@@ -132,9 +132,7 @@ void AAirship::BeginPlay()
 	{
 		UE_LOG(LogTemp, Error, TEXT("No PlayerController found! Skipping input setup."));
 	}
-	
 }
-
 //setup for the playinputs, the bind actions for each action is here with the function to be used and the BP function assoication
 void AAirship::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -246,7 +244,6 @@ void AAirship::Tick(float DeltaTime)
 		}
 	}
 }
-
 //checks for a valid crosshairwidget and updates it's poition from the mouse X/Y 
 void AAirship::UpdateCrosshairPosition()
 {
@@ -406,7 +403,7 @@ void AAirship::EquipEngines()
 		else UE_LOG(LogTemp, Warning, TEXT("Engine not found"));
 	}
 }
-//Finds all the weapons modules, adds them to the array and attaches them to the hardpoints
+//Gets the loadout from the game instance, finds the weapons and projectiles in each hardpoint loadout and sets them.
 void AAirship::EquipWeapons()
 {
 	// Ensure we have hardpoints
@@ -427,10 +424,15 @@ void AAirship::EquipWeapons()
 
 				// Equip the selected weapon
 				WeaponHardpoints[i]->EquipWeapon(GI->AirshipLoadout[i].SelectedWeapon);
-
+				//Get the loadout's projectile for the weapon and assign it to the weapon.
+				WeaponHardpoints[i]->MountedWeapon->SetProjectileClass(GI->AirshipLoadout[i].SelectedProjectile);
+				
 				UE_LOG(LogTemp, Log, TEXT("Equipped %s on %s"), 
 					*GI->AirshipLoadout[i].SelectedWeapon->GetName(), 
 					*WeaponHardpoints[i]->GetName());
+				UE_LOG(LogTemp,Log,TEXT("%s Assigned to %s"),
+					*GI->AirshipLoadout[i].SelectedProjectile->GetName(),
+					*GI->AirshipLoadout[i].SelectedWeapon->GetName());
 			}
 		}
 	}
@@ -439,7 +441,7 @@ void AAirship::EquipWeapons()
 		UE_LOG(LogTemp, Warning, TEXT("No GameInstance found or no selected airship!"));
 	}
 }
-
+//Finds all the hardpoint components and returns the Array with them
 TArray<UWeaponHardpoint*> AAirship::GetWeaponHardpoints() const
 {
 	TArray<UWeaponHardpoint*> FoundHardpoints;
@@ -460,7 +462,6 @@ TArray<UWeaponHardpoint*> AAirship::GetWeaponHardpoints() const
 
 	return FoundHardpoints;
 }
-
 //return (density / 2) * self.yval**2 * self.cd * self.lateral_area
 FVector AAirship::CalDrag(float Density) const
 {
@@ -527,11 +528,6 @@ FVector AAirship::GetCrosshairWorldPosition()
 {
 	return CrosshairWorldPosition;
 }
-
-// TArray<UWeaponHardpoint*> AAirship::GetWeaponHardpoints() const
-// {
-// 	return WeaponHardpoints;
-// }
 
 void AAirship::MoveZAxis()
 {

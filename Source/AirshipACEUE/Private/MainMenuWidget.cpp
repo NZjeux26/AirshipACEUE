@@ -236,33 +236,7 @@ void UMainMenuWidget::OnProjectileSelected(FString SelectedProjectile, ESelectIn
 			// Load the projectile class dynamically
 			FString Path = "/Game/Weapons/Projectiles/" + SelectedProjectile + "." + SelectedProjectile + "_C";
 			Loadout.SelectedProjectile = LoadClass<AProjectile>(nullptr, *Path);
-
-			// Try to load the class directly
-			UClass* ProjectileClass = StaticLoadClass(AProjectile::StaticClass(), nullptr, *Path);
-			if (ProjectileClass)
-			{
-				// Cast to ensure it's the right type
-				Loadout.SelectedProjectile = TSubclassOf<AProjectile>(ProjectileClass);
-				UE_LOG(LogTemp, Log, TEXT("Projectile %s assigned to hardpoint %s"), *SelectedProjectile, *HardpointName);
-			}
-			else
-			{
-				// Try loading as a blueprint
-				FString BlueprintPath = "/Game/Weapons/Projectiles/" + SelectedProjectile + "." + SelectedProjectile;
-				UBlueprint* ProjectileBlueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-                
-				if (ProjectileBlueprint && ProjectileBlueprint->GeneratedClass)
-				{
-					Loadout.SelectedProjectile = TSubclassOf<AProjectile>(ProjectileBlueprint->GeneratedClass);
-					UE_LOG(LogTemp, Log, TEXT("Projectile %s assigned to hardpoint %s via blueprint"), 
-						   *SelectedProjectile, *HardpointName);
-				}
-				else
-				{
-					UE_LOG(LogTemp, Error, TEXT("Failed to load projectile class for %s from path %s"), 
-						   *SelectedProjectile, *Path);
-				}
-			}
+			
 			// You could set default ammo count here if needed
 			// Loadout.AmmoCount = 100;  
 
@@ -563,7 +537,7 @@ void UMainMenuWidget::OnStartButtonClicked()
 	// Proceed to load the level
 	UGameplayStatics::OpenLevel(this, FName("testlevel"));
 }
-
+//This assigns the selected weapons and projectiles from the dropdowns to the loadout, which is then added to the hardpoints/weapons in EquipWeapons
 void UMainMenuWidget::OnApplyLoadoutClicked()
 {
 	 UE_LOG(LogTemp, Log, TEXT("Applying weapon loadout..."));
@@ -631,8 +605,8 @@ void UMainMenuWidget::OnApplyLoadoutClicked()
     		continue;
     	}
 
-    	FString ProjectilePath = "/Game/Weapons/Projectiles";
-    	Loadout.SelectedProjectile = LoadClass<AProjectile>(nullptr, *SelectedProjectile);
+    	FString ProjectilePath = "/Game/Weapons/Projectiles/" + SelectedProjectile + "." + SelectedProjectile + "_C";
+    	Loadout.SelectedProjectile = LoadClass<AProjectile>(nullptr, *ProjectilePath);
     	if (!Loadout.SelectedProjectile)
     	{
     		UE_LOG(LogTemp, Error, TEXT("Failed to load projectile class for %s from path %s"), *SelectedProjectile, *ProjectilePath);
