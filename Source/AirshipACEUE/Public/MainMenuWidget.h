@@ -35,8 +35,11 @@ public:
 	class UEditableTextBox* BallastMassBox;
 
 	UPROPERTY(meta = (BindWidget))
-	class UEditableTextBox* WeaponsMassBox;
-
+	class UTextBlock* AmmoMassBox;
+	
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* WeaponsMassBox;
+	
 	UPROPERTY(meta = (BindWidget))
 	class UTextBlock* DryMassBox;
 
@@ -87,7 +90,7 @@ public:
 	// Function to handle Apply button click
 	UFUNCTION()
 	void OnApplyMassChangesClicked();
-
+	
 	UFUNCTION()
 	void PopulateMassFields();
 	

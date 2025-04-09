@@ -28,6 +28,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Airship Properties")
 	float WeaponMass;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Airship Properties")
+	float AmmoMass;
+	
 	UPROPERTY(BlueprintReadWrite, Category = "Loadout")
 	TArray<FHardpointLoadout> AirshipLoadout; // Array of loadouts, one for each hardpoint
 

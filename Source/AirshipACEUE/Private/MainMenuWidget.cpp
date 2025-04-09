@@ -244,7 +244,6 @@ void UMainMenuWidget::OnProjectileSelected(FString SelectedProjectile, ESelectIn
 			break;
 		}
 	}
-
 	//code for ammo stuff.
 }
 
@@ -263,7 +262,7 @@ void UMainMenuWidget::OnAmmoAmountChanged(const FText& AmmoText, UWeaponHardpoin
 //When hitting the apply button, get the masses from the user input boxes, check tey are not < 0 and then set them, update total
 void UMainMenuWidget::OnApplyMassChangesClicked()
 {
-	if (!FuelMassBox || !CargoMassBox || !BallastMassBox || !WeaponsMassBox)
+	if (!FuelMassBox || !CargoMassBox || !BallastMassBox || !WeaponsMassBox || !AmmoMassBox || !WeaponsMassBox)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Mass input fields not bound properly!"));
 		return;
@@ -274,7 +273,8 @@ void UMainMenuWidget::OnApplyMassChangesClicked()
 	FString CargoMassStr = CargoMassBox->GetText().ToString();
 	FString BallastMassStr = BallastMassBox->GetText().ToString();
 	FString WeaponsMassStr = WeaponsMassBox->GetText().ToString();
-
+	FString AmmoMassStr = AmmoMassBox->GetText().ToString();
+	
 	//Checks for valid input, EG no blanks or non-numbers
 	if (!IsValidInput(FuelMassStr) || !IsValidInput(CargoMassStr) || !IsValidInput(BallastMassStr) || !IsValidInput(WeaponsMassStr))
 	{
@@ -290,10 +290,9 @@ void UMainMenuWidget::OnApplyMassChangesClicked()
 	float FuelMass = FCString::Atof(*FuelMassStr);
 	float BallastMass = FCString::Atof(*BallastMassStr);
 	float CargoMass = FCString::Atof(*CargoMassStr);
-	float WeaponMass = FCString::Atof(*WeaponsMassStr);
 	
 	//check they are not negative numbers
-	if (FuelMass < 0 || CargoMass < 0 || BallastMass < 0 || WeaponMass < 0)
+	if (FuelMass < 0 || CargoMass < 0 || BallastMass < 0)
 	{
 		if (ErrorText)
 		{
@@ -314,18 +313,47 @@ void UMainMenuWidget::OnApplyMassChangesClicked()
 			GI->FuelMass = FuelMass;
 			GI->CargoMass = CargoMass;
 			GI->BallastMass = BallastMass;
-			GI->WeaponMass = WeaponMass;
 
+			//Zero the masses of the weapons and ammo to clear any previous versions
+			float WeaponMass = 0;
+			float AmmoMass = 0;
+			GI->WeaponMass = 0;
+			GI->AmmoMass = 0;
+
+			//foreach hardpoint, get the weapon and ammo mass and add it to the Weapon and Ammo mass values for the UI/Airship Totals
+			for (const FHardpointLoadout& Loadout : GI->AirshipLoadout)
+			{
+				if (Loadout.SelectedWeapon)
+				{
+					AWeapon* WeaponDefault = Loadout.SelectedWeapon->GetDefaultObject<AWeapon>();
+					if (WeaponDefault) WeaponMass += WeaponDefault->GetWeaponsMass(); //Maybe updating weaponMass directly is not correct
+
+					if (Loadout.SelectedProjectile && Loadout.AmmoCount > 0)
+					{
+						AProjectile* ProjectileDefault = Loadout.SelectedProjectile->GetDefaultObject<AProjectile>();
+						if (ProjectileDefault) { AmmoMass += WeaponDefault->GetMunitionsMass(); }
+					}
+				}
+			}
+			
+			//set the game instance values to the masses from the dropdown selections
+			GI->WeaponMass = WeaponMass;
+			GI->AmmoMass = AmmoMass;
+			
 			// Retrieve DryMass from the default object of the selected airship class
 			AAirship* TempAirship = GI->SelectedAirship->GetDefaultObject<AAirship>();
 			float DryMass = TempAirship ? TempAirship->GetDryMass() : 0.0f;
 
 			// Calculate TotalMass including DryMass
-			float TotalMass = DryMass + FuelMass + CargoMass + BallastMass + WeaponMass + 8;
-			//float TotalMass = FuelMass + CargoMass + BallastMass + 8;
+			float TotalMass = DryMass + FuelMass + CargoMass + BallastMass + WeaponMass + AmmoMass + 8;
+
+			//set the values in the text fields for the non-editable values
 			TotalMassBox->SetText(FText::AsNumber(TotalMass));
-			UE_LOG(LogTemp, Log, TEXT("Updated airship masses: Fuel=%f, Cargo=%f, Ballast=%f, Weapons=%f"),
-			FuelMass, CargoMass, BallastMass, WeaponMass);
+			AmmoMassBox->SetText(FText::AsNumber(AmmoMass));
+			WeaponsMassBox->SetText(FText::AsNumber(WeaponMass));
+			
+			UE_LOG(LogTemp, Log, TEXT("Updated airship masses: Fuel=%f, Cargo=%f, Ballast=%f, Weapons=%f, Ammo=%f"),
+			FuelMass, CargoMass, BallastMass, WeaponMass,AmmoMass);
 		}
 		else
 		{
@@ -340,7 +368,7 @@ void UMainMenuWidget::OnApplyMassChangesClicked()
 
 void UMainMenuWidget::PopulateMassFields()
 {
-	if (!FuelMassBox || !CargoMassBox || !BallastMassBox || !WeaponsMassBox ||!EngineMassBox)
+	if (!FuelMassBox || !CargoMassBox || !BallastMassBox || !AmmoMassBox || !WeaponsMassBox ||!EngineMassBox)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Mass input fields not bound properly!"));
 		return;
@@ -351,6 +379,7 @@ void UMainMenuWidget::PopulateMassFields()
 	{
 		if (GI->SelectedAirship)
 		{
+			
 			// Create a temporary airship actor to access its default properties
 			AAirship* TempAirship = GI->SelectedAirship->GetDefaultObject<AAirship>();
 			if (TempAirship)
@@ -376,7 +405,7 @@ void UMainMenuWidget::PopulateMassFields()
 		}
 	}
 }
-
+//Populates the airship dropdown by finding all blueprints of class Airship in the Airship Folder
 void UMainMenuWidget::PopulateAirshipDropdown()
 {
     if (!AirshipDropdown)
@@ -614,6 +643,9 @@ void UMainMenuWidget::OnApplyLoadoutClicked()
     	
         UE_LOG(LogTemp, Log, TEXT("Weapon %s assigned to hardpoint %s"), *SelectedWeapon, *HardpointName);
     	UE_LOG(LogTemp,Log, TEXT("Projectile %s assigned to weapon %s"),*SelectedProjectile,*SelectedWeapon);
+
+    	//Update the masses in the UI
+    	OnApplyMassChangesClicked();
     }
 
     UE_LOG(LogTemp, Log, TEXT("Weapon loadout successfully applied."));

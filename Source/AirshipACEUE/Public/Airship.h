@@ -199,23 +199,25 @@ public:
 	// Setter for BallastMass
 	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
 	void SetBallastMass(float NewBallastMass);
-
-	// Getter for BallastMass
+	
 	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
 	float GetWeaponsMass() const { return WeaponMass; }
+
+	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
+	void SetMunitionsMass(float NewMunitionsMass);
+	
+	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
+	float GetAmmoMass() const { return MunitionsMass; }
 	
 	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
     void GetEngineMass(UEngines* Engine);
 	
-	// Setter for BallastMass
 	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
 	void SetWeaponsMass(float NewWeaponsMass); 
-
-	// Getter for BallastMass
+	
 	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
 	float GetTotalMass() const { return TotalMass; }
-
-	// Getter for BallastMass
+	
 	UFUNCTION(BlueprintCallable, Category = "Airship Properties")
 	float GetDryMass() const { return DryMass; }
 

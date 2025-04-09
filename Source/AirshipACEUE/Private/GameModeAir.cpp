@@ -38,6 +38,7 @@ void AGameModeAir::BeginPlay()
 				PlayerAirship->SetCargoMass(GI->CargoMass);
 				PlayerAirship->SetBallastMass(GI->BallastMass);
 				PlayerAirship->SetWeaponsMass(GI->WeaponMass);
+				PlayerAirship->SetMunitionsMass(GI->AmmoMass);
 
 				// Recalculate total mass
 				PlayerAirship->UpdateTotalMass();

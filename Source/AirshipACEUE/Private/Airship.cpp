@@ -58,6 +58,7 @@ AAirship::AAirship()
 	FuelMass = 1.0f;
 	CargoMass = 1.0f;
 	WeaponMass = 1.0f;
+	MunitionsMass = 1.0f;
 	BallastMass = 1.0f;
 	EngineMass = 1.0f;
 	NumEngines = 0;
@@ -518,7 +519,10 @@ void AAirship::SetWeaponsMass(float NewWeaponsMass)
 {
 	WeaponMass = NewWeaponsMass;
 }
-
+void AAirship::SetMunitionsMass(float NewMunitionsMass)
+{
+	MunitionsMass = NewMunitionsMass;
+}
 void AAirship::UpdateTotalMass()
 {
 	TotalMass = DryMass + FuelMass + CargoMass + WeaponMass + BallastMass + 8 + WeaponMass + MunitionsMass; //8 is fixed just until enginemass problems sorted
