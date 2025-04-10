@@ -126,49 +126,6 @@ void UMainMenuWidget::PopulateWeaponSelectionUI()
 	}
 }
 
-void UMainMenuWidget::PopulateProjSelectionUI(const FString& HardpointName)
-{
-	UVerticalBox* HardpointContainer = HardpointContainers.FindRef(HardpointName);
-	if (!HardpointContainer)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Could not find container for hardpoint: %s"), *HardpointName);
-		return;
-	}
-	// Create a label for the projectile dropdown
-	UTextBlock* ProjectileLabel = WidgetTree->ConstructWidget<UTextBlock>();
-	ProjectileLabel->SetText(FText::FromString(TEXT("Projectile:")));
-	HardpointContainer->AddChild(ProjectileLabel);
-	
-	//create the dropdown
-	UComboBoxString* ProjectileDropdown = WidgetTree->ConstructWidget<UComboBoxString>();
-	HardpointContainer->AddChild(ProjectileDropdown);
-	
-	UE_LOG(LogTemp, Log, TEXT("Created projectile dropdown for hardpoint: %s"), *HardpointName);
-	
-	//Add projectiles options
-	FString ProjectilesPath = "/Game/Weapons/Projectiles";
-	TArray<FAssetData> ProjectileAssets;
-	FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-	AssetRegistry.Get().GetAssetsByPath(FName(*ProjectilesPath), ProjectileAssets, true);
-
-	for (const FAssetData& Asset : ProjectileAssets)
-	{
-		// Ensure it's a valid weapon blueprint
-		if (UBlueprint* Blueprint = Cast<UBlueprint>(Asset.GetAsset()))
-		{
-			if (Blueprint->GeneratedClass && Blueprint->GeneratedClass->IsChildOf(AProjectile::StaticClass()))
-			{
-				ProjectileDropdown->AddOption(Asset.AssetName.ToString());
-				UE_LOG(LogTemp, Log, TEXT("Added projectile option: %s"), *Asset.AssetName.ToString());
-			}
-		}
-	}
-	//bind and call OnProjectileSelected to bind the projectile to the WeaponBP selected
-	ProjectileDropdown->OnSelectionChanged.AddDynamic(this,&UMainMenuWidget::OnProjectileSelected);
-	// Store reference for later use
-	HardpointProjectileDropdowns.Add(HardpointName, ProjectileDropdown);
-	UE_LOG(LogTemp, Log, TEXT("Added projectile dropdown to map with key: %s"), *HardpointName);
-}
 //Checks selection was human, finds the hardpoint selected and exstracts the name of it
 void UMainMenuWidget::OnWeaponSelected(FString SelectedWeapon, ESelectInfo::Type SelectionType)
 {
@@ -198,6 +155,65 @@ void UMainMenuWidget::OnWeaponSelected(FString SelectedWeapon, ESelectInfo::Type
 		return;
 	}
 	PopulateProjSelectionUI(HardpointName);
+}
+
+void UMainMenuWidget::PopulateProjSelectionUI(const FString& HardpointName)
+{
+	UVerticalBox* HardpointContainer = HardpointContainers.FindRef(HardpointName);
+	if (!HardpointContainer)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not find container for hardpoint: %s"), *HardpointName);
+		return;
+	}
+	// Check if a projectile dropdown already exists for this hardpoint
+	UComboBoxString* ProjectileDropdown = HardpointProjectileDropdowns.FindRef(HardpointName);
+    
+	if (ProjectileDropdown)
+	{
+		// Dropdown already exists, just clear and repopulate it
+		ProjectileDropdown->ClearOptions();
+		// Unbind any existing delegates to prevent duplicates
+		ProjectileDropdown->OnSelectionChanged.Clear();
+	}
+	else
+	{
+		// Create a label for the projectile dropdown
+		UTextBlock* ProjectileLabel = WidgetTree->ConstructWidget<UTextBlock>();
+		ProjectileLabel->SetText(FText::FromString(TEXT("Projectile:")));
+		HardpointContainer->AddChild(ProjectileLabel);
+	
+		//create the dropdown
+		ProjectileDropdown = WidgetTree->ConstructWidget<UComboBoxString>();
+		HardpointContainer->AddChild(ProjectileDropdown);
+	
+		UE_LOG(LogTemp, Log, TEXT("Created projectile dropdown for hardpoint: %s"), *HardpointName);
+		
+		// Store reference for later use
+		HardpointProjectileDropdowns.Add(HardpointName, ProjectileDropdown);
+		UE_LOG(LogTemp, Log, TEXT("Added projectile dropdown to map with key: %s"), *HardpointName);
+	}
+	
+	//Add projectiles options
+	FString ProjectilesPath = "/Game/Weapons/Projectiles";
+	TArray<FAssetData> ProjectileAssets;
+	FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	AssetRegistry.Get().GetAssetsByPath(FName(*ProjectilesPath), ProjectileAssets, true);
+
+	for (const FAssetData& Asset : ProjectileAssets)
+	{
+		// Ensure it's a valid weapon blueprint
+		if (UBlueprint* Blueprint = Cast<UBlueprint>(Asset.GetAsset()))
+		{
+			if (Blueprint->GeneratedClass && Blueprint->GeneratedClass->IsChildOf(AProjectile::StaticClass()))
+			{
+				ProjectileDropdown->AddOption(Asset.AssetName.ToString());
+				UE_LOG(LogTemp, Log, TEXT("Added projectile option: %s"), *Asset.AssetName.ToString());
+			}
+		}
+	}
+	// Store reference for later use
+	HardpointProjectileDropdowns.Add(HardpointName, ProjectileDropdown);
+	UE_LOG(LogTemp, Log, TEXT("Added projectile dropdown to map with key: %s"), *HardpointName);
 }
 
 void UMainMenuWidget::OnProjectileSelected(FString SelectedProjectile, ESelectInfo::Type SelectionType)
